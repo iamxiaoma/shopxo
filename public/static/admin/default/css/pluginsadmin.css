@@ -18,8 +18,8 @@
     border-radius: 2px;
 }
 .content ul.am-gallery-bordered.am-gallery-bordered .am-gallery-item.am-active {
-    border: 1px solid #fde2e2;
-    background: #fffbfb;
+    border: 1px solid #ff8a8a !important;
+    background: #fff2f2;
 }
 .content ul.am-gallery-bordered.am-gallery-bordered .am-gallery-item:hover {
     border: 1px solid #999;
@@ -58,9 +58,9 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    margin-top: 10px;
-    min-height: 36px;
-    line-height: 16px;
+    margin: 10px 0;
+    height: 36px;
+    line-height: 18px;
     font-weight: 300;
     color: #b3b3b3;
 }

@@ -10,8 +10,6 @@
 // +----------------------------------------------------------------------
 namespace app\service;
 
-use think\Db;
-
 /**
  * 小程序服务层
  * @author   Devil
@@ -44,8 +42,8 @@ class AppMiniService
         self::$application_name = isset($params['application_name']) ? $params['application_name'] : 'alipay';
 
         // 原包地址/操作地址
-        self::$old_root = ROOT.'public'.DS.'appmini'.DS.'old';
-        self::$new_root = ROOT.'public'.DS.'appmini'.DS.'new';
+        self::$old_root = ROOT.'sourcecode';
+        self::$new_root = ROOT.'public'.DS.'download'.DS.'sourcecode';
         self::$old_path = self::$old_root.DS.self::$application_name;
         self::$new_path = self::$new_root.DS.self::$application_name;
     }
@@ -74,7 +72,7 @@ class AppMiniService
                     if($temp_file != '.' && $temp_file != '..')
                     {
                         $file_path = self::$new_path.DS.$temp_file;
-                        $url = __MY_PUBLIC_URL__.'appmini'.DS.'new'.DS.self::$application_name.DS.$temp_file;
+                        $url = __MY_PUBLIC_URL__.'download'.DS.'sourcecode'.DS.self::$application_name.DS.$temp_file;
                         $result[] = [
                             'name'  => $temp_file,
                             'url'   => substr($url, -4) == '.zip' ? $url : '',
@@ -121,13 +119,13 @@ class AppMiniService
         // 源码包目录是否存在
         if(!is_dir(self::$new_root))
         {
-            return DataReturn('源码包目录不存在', -1);
+            return DataReturn('源码包目录不存在['.self::$new_root.']', -1);
         }
 
         // 源码包目录是否有权限
         if(!is_writable(self::$new_root))
         {
-            return DataReturn('源码包目录没有权限', -1);
+            return DataReturn('源码包目录没有权限['.self::$new_root.']', -1);
         }
 
         // 目录不存在则创建
@@ -148,7 +146,19 @@ class AppMiniService
 
         // 替换内容
         // app.js
-        $status = file_put_contents($new_dir.DS.'app.js', str_replace(['{{request_url}}', '{{application_title}}', '{{application_describe}}'], [__MY_URL__, $params['app_mini_title'], $params['app_mini_describe']], file_get_contents($new_dir.DS.'app.js')));
+        $search = [
+            '{{request_url}}',
+            '{{application_title}}',
+            '{{application_describe}}',
+            '{{price_symbol}}',
+        ];
+        $replace = [
+            __MY_URL__,
+            $params['app_mini_title'],
+            $params['app_mini_describe'],
+            config('shopxo.price_symbol'),
+        ];
+        $status = file_put_contents($new_dir.DS.'app.js', str_replace($search, $replace, file_get_contents($new_dir.DS.'app.js')));
         if($status === false)
         {
             return DataReturn('基础配置替换失败', -4);
@@ -159,6 +169,23 @@ class AppMiniService
         if($status === false)
         {
             return DataReturn('基础配置替换失败', -4);
+        }
+
+        // 小程序额外处理
+        switch(self::$application_name)
+        {
+            // 微信
+            case 'weixin' :
+                $ret = self::ExtendHandleWeixin($new_dir);
+                break;
+
+            // 默认
+            default :
+                $ret = DataReturn('无需处理', 0);
+        }
+        if(isset($ret['code']) && $ret['code'] != 0)
+        {
+            return $ret;
         }
 
         // 生成压缩包
@@ -175,13 +202,58 @@ class AppMiniService
     }
 
     /**
+     * 扩展处理 - 微信
+     * @author   Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2018-12-21
+     * @desc    description
+     * @param   [string]          $new_dir [新得源码包目录]
+     */
+    private static function ExtendHandleWeixin($new_dir)
+    {
+        // 是否开启好物推荐功能
+        $common_app_is_good_thing = MyC('common_app_is_good_thing', 0);
+        if($common_app_is_good_thing == 1)
+        {
+            // app.json
+            $file = $new_dir.DS.'app.json';
+            $data = json_decode(file_get_contents($file), true);
+            if(is_array($data) && isset($data['plugins']))
+            {
+                $data['plugins']['goodsSharePlugin'] = [
+                    'version'   => '4.0.1',
+                    'provider'  => 'wx56c8f077de74b07c',
+                ];
+                if(file_put_contents($file, JsonFormat($data)) === false)
+                {
+                    return DataReturn('好物推荐主配置失败', -50);
+                }
+            }
+
+            // goods-detail.json
+            $file = $new_dir.DS.'pages'.DS.'goods-detail'.DS.'goods-detail.json';
+            $data = json_decode(file_get_contents($file), true);
+            if(is_array($data) && isset($data['usingComponents']))
+            {
+                $data['usingComponents']['share-button'] = 'plugin://goodsSharePlugin/share-button';
+                if(file_put_contents($file, JsonFormat($data)) === false)
+                {
+                    return DataReturn('好物推荐商品配置失败', -51);
+                }
+            }
+        }
+        return DataReturn('配置成功', 0);
+    }
+
+    /**
      * 源码包删除
      * @author   Devil
      * @blog    http://gong.gg/
      * @version 1.0.0
      * @date    2018-12-21
      * @desc    description
-     * @param    [array]          $params [输入参数]
+     * @param   [array]          $params [输入参数]
      */
     public static function Delete($params = [])
     {

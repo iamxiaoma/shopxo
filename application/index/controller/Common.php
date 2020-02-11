@@ -160,6 +160,28 @@ class Common extends Controller
     }
 
     /**
+     * [CommonInit 公共数据初始化]
+     * @author   Devil
+     * @blog     http://gong.gg/
+     * @version  0.0.1
+     * @datetime 2017-03-09T11:43:48+0800
+     */
+    private function CommonInit()
+    {
+        // 用户数据
+        $this->user = UserService::LoginUserInfo();
+
+        // 公共参数
+        $this->params = input();
+
+        // 推荐人
+        if(!empty($this->params['referrer']))
+        {
+            session('share_referrer_id', $this->params['referrer']);
+        }
+    }
+
+    /**
      * [IsLogin 登录校验]
      * @author   Devil
      * @blog     http://gong.gg/
@@ -180,31 +202,6 @@ class Common extends Controller
     }
 
     /**
-     * [CommonInit 公共数据初始化]
-     * @author   Devil
-     * @blog     http://gong.gg/
-     * @version  0.0.1
-     * @datetime 2017-03-09T11:43:48+0800
-     */
-    private function CommonInit()
-    {
-        // 用户数据
-        if(session('user') !== null)
-        {
-            $this->user = UserService::LoginUserInfo();
-        }
-
-        // 公共参数
-        $this->params = input();
-
-        // 推荐人
-        if(!empty($this->params['referrer']))
-        {
-            session('share_referrer_id', $this->params['referrer']);
-        }
-    }
-
-    /**
      * [ViewInit 视图初始化]
      * @author   Devil
      * @blog     http://gong.gg/
@@ -216,17 +213,26 @@ class Common extends Controller
         // 公共参数
         $this->assign('params', $this->params);
 
+        // 价格符号
+        $this->assign('price_symbol', config('shopxo.price_symbol'));
+
+        // 站点类型
+        $this->assign('common_site_type', MyC('common_site_type', 0, true));
+
+        // 预约模式
+        $this->assign('common_order_is_booking', MyC('common_order_is_booking', 0, true));
+
         // 商店信息
         $this->assign('common_customer_store_tel', MyC('common_customer_store_tel'));
         $this->assign('common_customer_store_email', MyC('common_customer_store_email'));
         $this->assign('common_customer_store_address', MyC('common_customer_store_address'));
-        $this->assign('common_customer_store_qrcode', MyC('common_customer_store_qrcode'));
+        $this->assign('common_customer_store_qrcode', AttachmentPathViewHandle(MyC('common_customer_store_qrcode')));
         
         // 主题
         $default_theme = strtolower(MyC('common_default_theme', 'default', true));
         $this->assign('default_theme', $default_theme);
 
-        // 当前操作名称, 兼容插件模块名称        
+        // 当前操作名称, 兼容插件模块名称
         $module_name = strtolower(request()->module());
         $controller_name = strtolower(request()->controller());
         $action_name = strtolower(request()->action());
@@ -298,8 +304,19 @@ class Common extends Controller
         // 顶部右侧导航
         $this->assign('common_nav_top_right_list', NavigationService::HomeHavTopRight(['user'=>$this->user]));
 
+        // 底部导航
+        $this->assign('common_bottom_nav_list', NavigationService::BottomNavigation(['user'=>$this->user]));
+
         // 编辑器文件存放地址
-        $this->assign('editor_path_type', empty($this->user['id']) ? 'public' : 'user_'.$this->user['id']);
+        $this->assign('editor_path_type', empty($this->user['id']) ? 'public' : 'user-'.$this->user['id']);
+
+        // 备案信息
+        $this->assign('home_site_icp', MyC('home_site_icp'));
+        $this->assign('home_site_security_record_name', MyC('home_site_security_record_name'));
+        $this->assign('home_site_security_record_url', MyC('home_site_security_record_url'));
+
+        // 默认不加载百度地图api
+        $this->assign('is_load_baidu_map_api', 0);
     }
 
     /**
@@ -349,9 +366,9 @@ class Common extends Controller
             // 是否ajax请求
             if(IS_AJAX)
             {
-                die(json_encode(DataReturn(MyC('home_site_close_reason', '网站维护中...'), -10000)));
+                exit(json_encode(DataReturn(MyC('home_site_close_reason', '网站维护中...'), -10000)));
             } else {
-                die('<div style="text-align: center;margin-top: 15%;font-size: 18px;color: #f00;">'.MyC('home_site_close_reason', '网站维护中...', true).'</div>');
+                exit('<div style="text-align: center;margin-top: 15%;font-size: 18px;color: #f00;">'.MyC('home_site_close_reason', '网站维护中...', true).'</div>');
             }
         }
     }

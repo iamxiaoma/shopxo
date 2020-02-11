@@ -12,6 +12,8 @@ namespace app\api\controller;
 
 use app\service\PaymentService;
 use app\service\OrderService;
+use app\service\GoodsCommentsService;
+use app\service\ConfigService;
 
 /**
  * 我的订单
@@ -66,9 +68,10 @@ class Order extends Common
 
         // 获取列表
         $data_params = array(
-            'limit_start'   => $start,
-            'limit_number'  => $number,
-            'where'         => $where,
+            'm'                 => $start,
+            'n'                 => $number,
+            'where'             => $where,
+            'is_orderaftersale' => 1,
         );
         $data = OrderService::OrderList($data_params);
 
@@ -97,22 +100,102 @@ class Order extends Common
         // 参数
         $params = $this->data_post;
         $params['user'] = $this->user;
+        $params['user_type'] = 'user';
+        if(empty($params['id']))
+        {
+            return DataReturn('参数有误', -1);
+        }
 
         // 条件
         $where = OrderService::OrderListWhere($params);
 
         // 获取列表
         $data_params = array(
-            'limit_start'   => 0,
-            'limit_number'  => 1,
-            'where'         => $where,
+            'm'         => 0,
+            'n'         => 1,
+            'where'     => $where,
         );
         $data = OrderService::OrderList($data_params);
         if(!empty($data['data'][0]))
         {
-            return DataReturn('success', 0, $data['data'][0]);
+            // 返回信息
+            $result = [
+                'data'              => $data['data'][0],
+                'site_fictitious'   => null,
+            ];
+
+            // 虚拟销售配置
+            if($result['data']['order_model'] == 3 && $result['data']['pay_status'] == 1 && in_array($result['data']['status'], [3,4]))
+            {
+                $site_fictitious = ConfigService::SiteFictitiousConfig();
+                $result['site_fictitious'] = $site_fictitious['data'];
+            }
+            return DataReturn('success', 0, $result);
         }
         return DataReturn('数据不存在或已删除', -100);
+    }
+
+    /**
+     * 评价页面
+     * @author   Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2018-10-08
+     * @desc    description
+     */
+    public function Comments()
+    {
+        // 参数
+        $params = $this->data_post;
+        $params['user'] = $this->user;
+        $params['user_type'] = 'user';
+        if(empty($params['id']))
+        {
+            return DataReturn('参数有误', -1);
+        }
+
+        // 条件
+        $where = OrderService::OrderListWhere($params);
+
+        // 获取列表
+        $data_params = array(
+            'm'         => 0,
+            'n'         => 1,
+            'where'     => $where,
+        );
+        $data = OrderService::OrderList($data_params);
+        if(!empty($data['data'][0]))
+        {
+            // 是否已评论
+            if($data['data'][0]['user_is_comments'] > 0)
+            {
+                return DataReturn('你已进行过评论', -100);
+            }
+
+            // 返回数据
+            $result = [
+                'data'                  => $data['data'][0],
+                'editor_path_type'      => 'order_comments-'.$this->user['id'].'-'.$data['data'][0]['id'],
+            ];
+            return DataReturn('success', 0, $result);
+        }
+        return DataReturn('没有相关数据', -100);
+    }
+
+    /**
+     * 评价保存
+     * @author   Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2018-10-09
+     * @desc    description
+     */
+    public function CommentsSave()
+    {
+        $params = $this->data_post;
+        $params['user'] = $this->user;
+        $params['business_type'] = 'order';
+        return GoodsCommentsService::Comments($params);
     }
 
     /**

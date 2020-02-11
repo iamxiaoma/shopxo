@@ -13,6 +13,8 @@ namespace app\index\controller;
 use app\service\OrderService;
 use app\service\PaymentService;
 use app\service\GoodsCommentsService;
+use app\service\ConfigService;
+use app\service\SeoService;
 
 /**
  * 订单管理
@@ -96,6 +98,9 @@ class Order extends Common
         // 评价状态
         $this->assign('common_comments_status_list', lang('common_comments_status_list'));
 
+        // 浏览器名称
+        $this->assign('home_seo_site_title', SeoService::BrowserSeoTitle('我的订单', 1));
+
         // 参数
         $this->assign('params', $params);
         return $this->fetch();
@@ -131,7 +136,14 @@ class Order extends Common
             // 发起支付 - 支付方式
             $this->assign('buy_payment_list', PaymentService::BuyPaymentList(['is_enable'=>1, 'is_open_user'=>1]));
 
+            // 虚拟销售配置
+            $site_fictitious = ConfigService::SiteFictitiousConfig();
+            $this->assign('site_fictitious', $site_fictitious['data']);
+
             $this->assign('data', $data['data'][0]);
+
+            // 加载百度地图api
+            $this->assign('is_load_baidu_map_api', 1);
 
             // 参数
             $this->assign('params', $params);
@@ -171,6 +183,9 @@ class Order extends Common
         {
             $this->assign('referer_url', empty($_SERVER['HTTP_REFERER']) ? MyUrl('index/order/index') : $_SERVER['HTTP_REFERER']);
             $this->assign('data', $data['data'][0]);
+
+            // 编辑器文件存放地址
+            $this->assign('editor_path_type', 'order_comments-'.$this->user['id'].'-'.$data['data'][0]['id']);
             return $this->fetch();
         } else {
             $this->assign('msg', '没有相关数据');

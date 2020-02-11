@@ -25,7 +25,7 @@
             <form class="am-form form-validation form-search" method="post" action="{{:MyUrl('index/order/index')}}" request-type="form">
                 <div class="thin">
                     <div class="am-input-group am-input-group-sm am-fl so">
-                        <input type="text" autocomplete="off" name="keywords" class="am-radius" placeholder="订单号/收件信息" value="{{if !empty($params.keywords)}}{{$params.keywords}}{{/if}}" />
+                        <input type="text" autocomplete="off" name="keywords" class="am-radius" placeholder="订单号" value="{{if !empty($params.keywords)}}{{$params.keywords}}{{/if}}" />
                         <span class="am-input-group-btn">
                             <button class="am-btn am-btn-default am-radius" type="submit" data-am-loading="{spinner:'circle-o-notch', loadingText:'搜索中...'}">搜索</button>
                         </span>
@@ -170,9 +170,9 @@
                                     </div>
                                     <div class="wap-base am-show-sm-only">
                                         {{if $goods['original_price'] gt 0}}
-                                            <span class="original-price">￥{{$goods.original_price}}</span>
+                                            <span class="original-price">{{$price_symbol}}{{$goods.original_price}}</span>
                                         {{/if}}
-                                        <strong class="line-price">￥{{$goods.price}}</strong>
+                                        <strong class="line-price">{{$price_symbol}}{{$goods.price}}</strong>
                                         <span class="wap-number">x{{$goods.buy_number}}</span>
                                         {{if isset($goods['returned_quantity']) and $goods['returned_quantity'] gt 0}}
                                             <span class="am-badge am-round am-badge-warning">已退 {{$goods.returned_quantity}}</span>
@@ -181,9 +181,9 @@
                                 </td>
                                 <td class="row-price am-hide-sm-only">
                                     {{if $goods['original_price'] gt 0}}
-                                        <p class="original-price">￥{{$goods.original_price}}</p>
+                                        <p class="original-price">{{$price_symbol}}{{$goods.original_price}}</p>
                                     {{/if}}
-                                    <p class="line-price">￥{{$goods.price}}</p>
+                                    <p class="line-price">{{$price_symbol}}{{$goods.price}}</p>
                                 </td>
                                 <td class="row-number am-hide-sm-only">
                                     <span>x{{$goods.buy_number}}</span>
@@ -193,37 +193,18 @@
                                 </td>
                                 <td class="row-number">
                                     <a href="{{:MyUrl('index/orderaftersale/aftersale', ['oid'=>$order['id'], 'did'=>$goods['id']])}}" target="_blank">
-                                        {{switch $order.status}}
-                                            {{case 2|3}}
-                                                {{if empty($goods['orderaftersale'])}}
-                                                    退款/退货
-                                                {{else /}}
-                                                    {{if $goods['orderaftersale']['status'] eq 3}}
-                                                        <span class="am-text-success">查看退款</span>
-                                                    {{else /}}
-                                                        <span class="am-text-secondary">查看进度</span>
-                                                    {{/if}}
-                                                {{/if}}
-                                            {{/case}}
-                                            {{case 4|6}}
-                                                {{if empty($goods['orderaftersale'])}}
-                                                    {{if $order['status'] eq 4}}
-                                                        申请售后
-                                                    {{/if}}
-                                                {{else /}}
-                                                    {{if $goods['orderaftersale']['status'] eq 3}}
-                                                        <span class="am-text-success">查看退款</span>
-                                                    {{else /}}
-                                                        <span class="am-text-secondary">查看进度</span>
-                                                    {{/if}}
-                                                {{/if}}
-                                            {{/case}}
-                                        {{/switch}}
+                                        {{if !empty($goods['orderaftersale_btn_text'])}}
+                                            {{if empty($goods['orderaftersale'])}}
+                                                {{$goods.orderaftersale_btn_text}}
+                                            {{else /}}
+                                                <span class="{{if $goods['orderaftersale']['status'] eq 3}}am-text-success{{else /}}am-text-secondary{{/if}}">{{$goods.orderaftersale_btn_text}}</span>
+                                            {{/if}}
+                                        {{/if}}
                                     </a>
                                 </td>
                                 {{if $keys eq 0}}
                                     <td class="row-total-price am-hide-sm-only" rowspan="{{$order.items_count}}">
-                                        <strong class="total-price-content">￥{{$order.total_price}}</strong>
+                                        <strong class="total-price-content">{{$price_symbol}}{{$order.total_price}}</strong>
                                         {{if isset($order['refund_price']) and $order['refund_price'] gt 0}}
                                             <br /><span class="am-badge am-round am-badge-warning">已退 {{$order.refund_price}}</span>
                                         {{/if}}
@@ -253,19 +234,26 @@
                                             <button type="button" class="am-btn am-btn-danger am-btn-xs am-radius am-icon-trash-o am-btn-block submit-delete" data-url="{{:MyUrl('index/order/delete')}}" data-id="{{$order.id}}" data-view="reload"> 删除</button>
                                         {{/if}}
 
-                                        <!-- 钩子订单操作 -->
-                                        {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true}}
+                                        <!-- 订单列表操作钩子 -->
+                                        {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
                                             <div class="plugins-tag">
-                                                <span>plugins_service_order_handle_operation_html</span>
+                                                <span>plugins_view_index_order_list_operation</span>
                                             </div>
                                         {{/if}}
-                                        {{if !empty($order['plugins_service_order_handle_operation_html']) and is_array($order['plugins_service_order_handle_operation_html'])}}
-                                            {{foreach $order.plugins_service_order_handle_operation_html as $hook}}
-                                                {{if is_string($hook) or is_int($hook)}}
-                                                    {{$hook|raw}}
-                                                {{/if}}
-                                            {{/foreach}}
-                                        {{/if}}
+                                        {{php}}
+                                            $hook_name = 'plugins_view_index_order_list_operation';
+                                            $hook_data = Hook::listen($hook_name, ['hook_name'=>$hook_name, 'is_backend'=>false, 'id'=>$order['id'], 'data'=>$order]);
+                                            if(!empty($hook_data) && is_array($hook_data))
+                                            {
+                                                foreach($hook_data as $hook)
+                                                {
+                                                    if(is_string($hook) || is_int($hook))
+                                                    {
+                                                        echo htmlspecialchars_decode($hook);
+                                                    }
+                                                }
+                                            }
+                                        {{/php}}
                                     </td>
                                 {{/if}}
                             </tr>

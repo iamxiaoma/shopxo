@@ -1,7 +1,7 @@
 # ShopXO 国内领先企业级B2C免费开源电商系统！
 * 求实进取、创新专注、自主研发、国内领先企业级B2C电商系统解决方案。
 * 遵循Apache2开源协议发布，无需授权、可商用、可二次开发、满足99%的电商运营需求。
-* PC+H5、支付宝小程序、微信小程序、百度小程序(筹备中)。
+* PC+H5、支付宝小程序、微信小程序、百度小程序、头条&抖音小程序、QQ小程序。
 
 ### 传送门
 * 官网地址：https://shopxo.net/
@@ -10,9 +10,12 @@
 * 演示地址：https://demo.shopxo.net/ （管理账户/密码可进入官网查看）
 * 支付宝小程序：https://shopxo.net/alipay.html （已发布）
 * 微信小程序：https://shopxo.net/weixin.html （已发布）
+* 百度小程序：https://shopxo.net/baidu.html （已发布）
+* 头条&抖音小程序：https://shopxo.net/zijietiaodong.html （已发布）
+* QQ小程序：https://shopxo.net/qq.html （已发布）
 
 ### 小程序体验码
-![微信小程序](https://images.gitee.com/uploads/images/2019/0125/111858_88b945a6_488475.jpeg "微信小程序")
+![小程序二维码](https://images.gitee.com/uploads/images/2019/1105/211816_be07363a_488475.jpeg "shopxo-qrcode.jpg")
 
 ### 安装教程
 * 安装教程：https://ask.shopxo.net/article/5
@@ -25,6 +28,10 @@
 * Github：https://github.com/gongfuxiang/shopxo
 * 码云/开源中国：https://gitee.com/gongfuxiang/shopxo
 * 腾讯云开发者：https://dev.tencent.com/u/gongfuxiang/p/shopxo/git
+
+### 部分功能特点
+* 多种模式（销售+自提+虚拟+展示+销售/自提）、分销、会员等级、限时秒杀、优惠券/折扣劵、报价单、商品相册标签、钱包、多端小程序、等等...
+* 更多查看应用商店 https://store.shopxo.net/
 
 ### 扩展性
 * 独立模块式开发，完善的注释，易扩展，应用管理。
@@ -46,14 +53,14 @@ ThinkPHP是一个快速、简单的基于MVC和面向对象的轻量级PHP开发
 ##### 轻量级，高性能
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Amaze UI 面向 HTML5 开发，使用 CSS3 来做动画交互，平滑、高效，更适合移动设备，让 Web 应用更快速载入。
 
-# 小程序图片展示（微信、支付宝）
+# 小程序图片展示
 ![小程序](https://images.gitee.com/uploads/images/2019/0111/104727_fb5ce133_488475.jpeg "xcx-1500.jpg")
 
 # PC端图片展示
-![电脑端](https://images.gitee.com/uploads/images/2019/0111/104442_0a307119_488475.gif "1547174456822.gif")
+![电脑端](https://images.gitee.com/uploads/images/2020/0203/000718_c4209c1f_488475.gif "home.gif")
 
 # 后台管理图片展示
-![后台管理](https://images.gitee.com/uploads/images/2019/0227/092528_9eb4dbef_488475.gif "admin-2.gif")
+![后台管理](https://images.gitee.com/uploads/images/2020/0203/000749_4a8b1c43_488475.gif "admin.gif")
 
 # 商城基础功能简介
 ### 后端功能列表
@@ -64,12 +71,16 @@ ThinkPHP是一个快速、简单的基于MVC和面向对象的轻量级PHP开发
 站点配置
     > 站点设置
         > 基础配置
+        > 备案信息
+        > 站点类型
         > 用户注册
         > 用户登录
         > 密码找回
         > 附件
         > 图片验证码
         > 订单售后
+        > 搜索
+        > 扩展项
     > 短信设置
         > 短信设置
         > 消息模板
@@ -118,6 +129,15 @@ ThinkPHP是一个快速、简单的基于MVC和面向对象的轻量级PHP开发
     > 基础配置
     > 小程序源码包
 微信小程序
+    > 基础配置
+    > 小程序源码包
+百度小程序
+    > 基础配置
+    > 小程序源码包
+头条小程序
+    > 基础配置
+    > 小程序源码包
+QQ小程序
     > 基础配置
     > 小程序源码包
 支付宝生活号（仅v1.1.0版本有，后续版本已移除）

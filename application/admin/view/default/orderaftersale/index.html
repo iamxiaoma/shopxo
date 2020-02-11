@@ -71,8 +71,33 @@
         </form>
         <!-- form end -->
 
+        <!-- top operation start -->
+        <div class="am-g am-margin-top-sm">
+            <!-- 顶部操作钩子 -->
+            {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
+                <div class="plugins-tag">
+                    <span>plugins_view_admin_order_aftersale_top_operation</span>
+                </div>
+            {{/if}}
+            {{php}}
+                $hook_name = 'plugins_view_admin_order_aftersale_top_operation';
+                $hook_data = Hook::listen($hook_name, ['hook_name'=>$hook_name, 'is_backend'=>true]);
+                if(!empty($hook_data) && is_array($hook_data))
+                {
+                    foreach($hook_data as $hook)
+                    {
+                        if(is_string($hook) || is_int($hook))
+                        {
+                            echo htmlspecialchars_decode($hook);
+                        }
+                    }
+                }
+            {{/php}}
+        </div>
+        <!-- top operation end -->
+
         <!-- list start -->
-        <table class="am-table am-table-striped am-table-hover am-text-middle m-t-10">
+        <table class="am-table am-table-striped am-table-hover am-text-middle am-margin-top-sm">
             <thead>
                 <tr>
                     <th class="row-goods am-hide-sm-only">商品信息</th>
@@ -106,9 +131,9 @@
                                     </div>
                                 </div>
                                 {{if $v.order_data.items.original_price gt 0}}
-                                    <p class="original-price">￥{{$v.order_data.items.original_price}}</p>
+                                    <p class="original-price">{{$price_symbol}}{{$v.order_data.items.original_price}}</p>
                                 {{/if}}
-                                <p class="line-price">￥{{$v.order_data.items.price}} x {{$v.order_data.items.buy_number}}</p>
+                                <p class="line-price">{{$price_symbol}}{{$v.order_data.items.price}} x {{$v.order_data.items.buy_number}}</p>
                             </td>
                             <td class="user-info am-hide-md-down">
                                 {{if !empty($v['user'])}}
@@ -127,7 +152,7 @@
                                 类型：{{$v.type_text}}<br />
                                 原因：{{$v.reason}}<br />
                                 数量：{{$v.number}}<br />
-                                金额：<span class="am-text-danger">￥{{$v.price}}</span><br />
+                                金额：<span class="am-text-danger">{{$price_symbol}}{{$v.price}}</span><br />
                                 说明：{{$v.msg}}<br />
                                 时间：{{$v.apply_time_time}}
                             </td>
@@ -137,7 +162,9 @@
                                         <ul class="am-slides">
                                             {{foreach $v.images as $img}}
                                                 <li>
-                                                    <img src="{{$img}}" />
+                                                    <a href="{{$img}}" target="_blank">
+                                                        <img src="{{$img}}" />
+                                                    </a>
                                                 </li>
                                             {{/foreach}}
                                         </ul>
@@ -189,9 +216,9 @@
                                                         </div>
                                                     </div>
                                                     {{if $v.order_data.items.original_price gt 0}}
-                                                        <p class="original-price">￥{{$v.order_data.items.original_price}}</p>
+                                                        <p class="original-price">{{$price_symbol}}{{$v.order_data.items.original_price}}</p>
                                                     {{/if}}
-                                                    <p class="line-price">￥{{$v.order_data.items.price}} x {{$v.order_data.items.buy_number}}</p>
+                                                    <p class="line-price">{{$price_symbol}}{{$v.order_data.items.price}} x {{$v.order_data.items.buy_number}}</p>
                                                 </dd>
 
                                                 <dt>用户信息</dt>
@@ -214,7 +241,7 @@
                                                     类型：{{$v.type_text}}<br />
                                                     原因：{{$v.reason}}<br />
                                                     数量：{{$v.number}}<br />
-                                                    金额：<span class="am-text-danger">￥{{$v.price}}</span><br />
+                                                    金额：<span class="am-text-danger">{{$price_symbol}}{{$v.price}}</span><br />
                                                     说明：{{$v.msg}}<br />
                                                     时间：{{$v.apply_time_time}}
                                                 </dd>
@@ -290,6 +317,27 @@
                                 {{if in_array($v['status'], [4,5])}}
                                     <button class="am-btn am-btn-danger am-btn-xs am-radius am-btn-block am-icon-trash-o submit-delete" data-url="{{:MyUrl('admin/orderaftersale/delete')}}" data-id="{{$v.id}}"> 删除</button>
                                 {{/if}}
+
+                                <!-- 订单售后列表操作钩子 -->
+                                {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
+                                    <div class="plugins-tag">
+                                        <span>plugins_view_admin_orderaftersale_list_operation</span>
+                                    </div>
+                                {{/if}}
+                                {{php}}
+                                    $hook_name = 'plugins_view_admin_orderaftersale_list_operation';
+                                    $hook_data = Hook::listen($hook_name, ['hook_name'=>$hook_name, 'is_backend'=>true, 'id'=>$v['id'], 'data'=>$v]);
+                                    if(!empty($hook_data) && is_array($hook_data))
+                                    {
+                                        foreach($hook_data as $hook)
+                                        {
+                                            if(is_string($hook) || is_int($hook))
+                                            {
+                                                echo htmlspecialchars_decode($hook);
+                                            }
+                                        }
+                                    }
+                                {{/php}}
                             </td>
                         </tr>
                     {{/foreach}}
@@ -300,6 +348,31 @@
             <div class="table-no"><i class="am-icon-warning"></i> 没有相关数据</div>
         {{/if}}
         <!-- list end -->
+
+        <!-- bottom operation start -->
+        <div class="am-g am-margin-top-sm">
+            <!-- 底部操作钩子 -->
+            {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
+                <div class="plugins-tag">
+                    <span>plugins_view_admin_order_aftersale_bottom_operation</span>
+                </div>
+            {{/if}}
+            {{php}}
+                $hook_name = 'plugins_view_admin_order_aftersale_bottom_operation';
+                $hook_data = Hook::listen($hook_name, ['hook_name'=>$hook_name, 'is_backend'=>true]);
+                if(!empty($hook_data) && is_array($hook_data))
+                {
+                    foreach($hook_data as $hook)
+                    {
+                        if(is_string($hook) || is_int($hook))
+                        {
+                            echo htmlspecialchars_decode($hook);
+                        }
+                    }
+                }
+            {{/php}}
+        </div>
+        <!-- bottom operation end -->
 
         <!-- 审核弹窗 -->
         <div class="am-popup" id="order-audit-popup">

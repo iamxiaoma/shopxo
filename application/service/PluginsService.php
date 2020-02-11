@@ -36,28 +36,56 @@ class PluginsService
     public static function PluginsData($plugins, $attachment_field = [], $is_cache = true)
     {
         // 从缓存获取数据
+        $data = [];
         $key = config('shopxo.cache_plugins_data_key').$plugins;
         if($is_cache === true)
         {
             $data = cache($key);
         }
+
+        // 数据不存在则从数据库读取
         if(empty($data))
         {
             // 获取数据
-            $data = Db::name('Plugins')->where(['plugins'=>$plugins])->value('data');
-            if(!empty($data))
+            $ret = self::PluginsField($plugins, 'data');
+            if(!empty($ret['data']))
             {
-                $data = json_decode($data, true);
-
-                // 是否有图片需要处理
-                if(!empty($attachment_field) && is_array($attachment_field))
+                $data = json_decode($ret['data'], true);
+                if(!empty($data) && is_array($data))
                 {
-                    foreach($attachment_field as $field)
+                    // 是否有自定义附件需要处理
+                    if(!empty($attachment_field) && is_array($attachment_field))
                     {
-                        if(isset($data[$field]))
+                        foreach($attachment_field as $field)
                         {
-                            $data[$field.'_old'] = $data[$field];
-                            $data[$field] = ResourcesService::AttachmentPathViewHandle($data[$field]);
+                            if(isset($data[$field]))
+                            {
+                                $data[$field.'_old'] = $data[$field];
+                                $data[$field] = ResourcesService::AttachmentPathViewHandle($data[$field]);
+                            }
+                        }
+                    } else {
+                        // 所有附件后缀名称
+                        $attachment_ext = config('ueditor.fileManagerAllowFiles');
+
+                        // 未自定义附件则自动根据内容判断处理附件，建议自定义附件字段名称处理更高效
+                        if(!empty($attachment_ext) && is_array($attachment_ext))
+                        {
+                            foreach($data as $k=>$v)
+                            {
+                                if(!empty($v) && !is_array($v) && !is_object($v))
+                                {
+                                    $ext = strrchr(substr($v, -6), '.');
+                                    if($ext !== false)
+                                    {
+                                        if(in_array($ext, $attachment_ext))
+                                        {
+                                            $data[$k.'_old'] = $v;
+                                            $data[$k] = ResourcesService::AttachmentPathViewHandle($v);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -114,6 +142,9 @@ class PluginsService
             }
         }
 
+        // 移除多余的字段
+        unset($params['data']['pluginsname'], $params['data']['pluginscontrol'], $params['data']['pluginsaction']);
+
         // 数据更新
         if(Db::name('Plugins')->where(['plugins'=>$params['plugins']])->update(['data'=>json_encode($params['data']), 'upd_time'=>time()]))
         {
@@ -134,11 +165,88 @@ class PluginsService
      * @desc    description
      * @param   [string]          $plugins        [应用标记]
      * @param   [string]          $field          [字段名称]
+     * @return  [mixed]                           [不存在返回null, 则原始数据]
      */
     public static function PluginsField($plugins, $field)
     {
         $data = Db::name('Plugins')->where(['plugins'=>$plugins])->value($field);
         return DataReturn('操作成功', 0, $data);
+    }
+
+    /**
+     * 应用状态
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2019-10-17
+     * @desc    description
+     * @param   [string]          $plugins        [应用标记]
+     */
+    public static function PluginsStatus($plugins)
+    {
+        $ret = self::PluginsField($plugins, 'is_enable');
+        return $ret['data'];
+    }
+
+    /**
+     * 应用校验
+     * @author   Devil
+     * @blog     http://gong.gg/
+     * @version  1.0.0
+     * @date     2020-01-02
+     * @param   [string]          $plugins        [应用标记]
+     */
+    public static function PluginsCheck($plugins)
+    {
+        $ret = self::PluginsStatus($plugins);
+        if($ret === null)
+        {
+            return DataReturn('应用未安装['.$plugins.']', -10);
+        }
+        if($ret != 1)
+        {
+            return DataReturn('应用未启用['.$plugins.']', -10);
+        }
+        return DataReturn('验证成功', 0);
+    }
+
+    /**
+     * 应用控制器调用
+     * @author   Devil
+     * @blog     http://gong.gg/
+     * @version  1.0.0
+     * @date     2020-01-02
+     * @param   [string]          $plugins        [应用标记]
+     * @param   [string]          $control        [应用控制器]
+     * @param   [string]          $action         [应用方法]
+     * @param   [string]          $group          [应用组(admin, index, api)]
+     * @param   [array]           $params         [输入参数]
+     */
+    public static function PluginsControlCall($plugins, $control, $action, $group = 'index', $params = [])
+    {
+        // 应用校验
+        $ret = self::PluginsCheck($plugins);
+        if($ret['code'] != 0)
+        {
+            return $ret;
+        }
+
+        // 应用控制器
+        $control = ucfirst($control);
+        $plugins = '\app\plugins\\'.$plugins.'\\'.$group.'\\'.$control;
+        if(!class_exists($plugins))
+        {
+            return DataReturn('应用控制器未定义['.$control.']', -1);
+        }
+
+        // 调用方法
+        $action = ucfirst($action);
+        $obj = new $plugins();
+        if(!method_exists($obj, $action))
+        {
+            return DataReturn('应用方法未定义['.$action.']', -1);
+        }
+        return DataReturn('验证成功', 0, $obj->$action($params));
     }
 }
 ?>

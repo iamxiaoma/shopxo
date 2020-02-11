@@ -6,14 +6,14 @@
 		<!-- form start -->
 		<form class="am-form form-validation view-save" action="{{:MyUrl('admin/user/save')}}" method="POST" request-type="ajax-url" request-value="{{:MyUrl('admin/user/index', $params)}}">
 			<legend>
-				<span class="fs-16">
+				<span class="am-text-default">
 					{{if empty($data['id'])}}
 						成员添加
 					{{else /}}
 						成员编辑
 					{{/if}}
 				</span>
-				<a href="{{:MyUrl('admin/user/index', $params)}}" class="fr fs-14 m-t-5 am-icon-mail-reply"> 返回</a>
+				<a href="{{:MyUrl('admin/user/index', $params)}}" class="am-fr am-text-sm am-margin-top-xs am-icon-mail-reply"> 返回</a>
 			</legend>
 			<div class="am-form-group">
 				<label>用户名</label>
@@ -38,12 +38,32 @@
 				<input type="text" name="alipay_openid" class="am-radius" placeholder="支付宝openid" data-validation-message="请填写支付宝openid" {{if !empty($data)}} value="{{$data.alipay_openid}}"{{/if}} />
 			</div>
 			<div class="am-form-group">
+				<label>百度openid</label>
+				<input type="text" name="baidu_openid" class="am-radius" placeholder="百度openid" data-validation-message="请填写百度openid" {{if !empty($data)}} value="{{$data.baidu_openid}}"{{/if}} />
+			</div>
+			<div class="am-form-group">
+				<label>头条openid</label>
+				<input type="text" name="toutiao_openid" class="am-radius" placeholder="头条openid" data-validation-message="请填写头条openid" {{if !empty($data)}} value="{{$data.toutiao_openid}}"{{/if}} />
+			</div>
+			<div class="am-form-group">
+				<label>QQopenid</label>
+				<input type="text" name="qq_openid" class="am-radius" placeholder="QQopenid" data-validation-message="请填写QQopenid" {{if !empty($data)}} value="{{$data.qq_openid}}"{{/if}} />
+			</div>
+			<div class="am-form-group">
+				<label>QQunionid</label>
+				<input type="text" name="qq_unionid" class="am-radius" placeholder="QQunionid" data-validation-message="请填写QQunionid" {{if !empty($data)}} value="{{$data.qq_unionid}}"{{/if}} />
+			</div>
+			<div class="am-form-group">
 				<label>微信openid</label>
 				<input type="text" name="weixin_openid" class="am-radius" placeholder="微信openid" data-validation-message="请填写微信openid" {{if !empty($data)}} value="{{$data.weixin_openid}}"{{/if}} />
 			</div>
 			<div class="am-form-group">
-				<label>百度openid</label>
-				<input type="text" name="baidu_openid" class="am-radius" placeholder="百度openid" data-validation-message="请填写百度openid" {{if !empty($data)}} value="{{$data.baidu_openid}}"{{/if}} />
+				<label>微信unionid</label>
+				<input type="text" name="weixin_unionid" class="am-radius" placeholder="微信unionid" data-validation-message="请填写微信unionid" {{if !empty($data)}} value="{{$data.weixin_unionid}}"{{/if}} />
+			</div>
+			<div class="am-form-group">
+				<label>微信webopenid</label>
+				<input type="text" name="weixin_web_openid" class="am-radius" placeholder="微信webopenid" data-validation-message="请填写微信webopenid" {{if !empty($data)}} value="{{$data.weixin_web_openid}}"{{/if}} />
 			</div>
 
 			<div class="am-form-group">
@@ -66,6 +86,26 @@
 				<label>登录密码</label>
 				<input type="text" placeholder="登录密码" name="pwd" pattern="{{:lang('common_regex_pwd')}}" data-validation-message="登录密码格式 6~18 个字符之间" class="am-radius" value="" />
 			</div>
+
+			<!-- 插件扩展数据 start -->
+			{{if isset($shopxo_is_develop) and $shopxo_is_develop eq true}}
+                <div class="plugins-tag">
+                    <span>plugins_view_admin_user_save</span>
+                </div>
+            {{/if}}
+			{{if !empty($plugins_view_admin_user_save_data) and is_array($plugins_view_admin_user_save_data)}}
+				<div class="am-alert am-alert-secondary">
+					<label class="am-text-sm am-text-warning">该区域为插件扩展数据，请按照插件文档填写相应的值</label>
+					<div>
+						{{foreach $plugins_view_admin_user_save_data as $hook}}
+		                    {{if is_string($hook) or is_int($hook)}}
+		                        {{$hook|raw}}
+		                    {{/if}}
+		                {{/foreach}}
+					</div>
+				</div>
+			{{/if}}
+			<!-- 插件扩展数据 end -->
 
 			<div class="am-form-group am-form-group-refreshing">
 				<input type="hidden" name="id" {{if !empty($data)}} value="{{$data.id}}"{{/if}} />

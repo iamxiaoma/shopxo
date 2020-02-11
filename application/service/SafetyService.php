@@ -113,13 +113,13 @@ class SafetyService
         {
             // 用户登录密码修改钩子
             $hook_name = 'plugins_service_user_login_pwd_update';
-            $ret = Hook::listen($hook_name, [
+            $ret = HookReturnHandle(Hook::listen($hook_name, [
                 'hook_name'     => $hook_name,
                 'is_backend'    => true,
                 'params'        => ['accounts'=>$accounts, 'pwd'=>$pwd],
                 'user_id'       => $user_id,
                 'user'          => Db::name('User')->field('id,username,nickname,mobile,email,gender,avatar,province,city,birthday')->where(['id'=>$user_id])->find(),
-            ]);
+            ]));
             if(isset($ret['code']) && $ret['code'] != 0)
             {
                 return $ret;
@@ -247,7 +247,7 @@ class SafetyService
                 'expire_time' => MyC('common_verify_expire_time'),
                 'time_interval' =>  MyC('common_verify_time_interval'),
             );
-        $code = GetNumberCode(6);
+        $code = GetNumberCode(4);
         if($params['type'] == 'sms')
         {
             $obj = new \base\Sms($verify_params);
@@ -440,13 +440,13 @@ class SafetyService
 
             // 账号修改钩子
             $hook_name = 'plugins_service_user_accounts_update';
-            $ret = Hook::listen($hook_name, [
+            $ret = HookReturnHandle(Hook::listen($hook_name, [
                 'hook_name'     => $hook_name,
                 'is_backend'    => true,
                 'params'        => ['accounts'=>$user[$field], 'new_accounts'=>$params['accounts'], 'field'=>$field],
                 'user_id'       => $user['id'],
                 'user'          => Db::name('User')->field('id,username,nickname,mobile,email,gender,avatar,province,city,birthday')->where(['id'=>$user['id']])->find(),
-            ]);
+            ]));
             if(isset($ret['code']) && $ret['code'] != 0)
             {
                 return $ret;

@@ -16,13 +16,13 @@ $(function()
                 $(".select-result dl").append(copy_html.attr("id", selected_tag_name));
             }
         }
-        get_goods_list(1);
+        GetGoodsList(1);
     });
 
     $(document).on('click', '.select-result dl dd', function() {
         $(this).remove();
         $('#'+$(this).attr('id')+'-dl').find('.select-all').addClass('selected').siblings().removeClass('selected');
-        get_goods_list(1);
+        GetGoodsList(1);
     });
 
     $(document).on('click', 'ul.select dd', function() {
@@ -42,7 +42,7 @@ $(function()
         $(this).hide();
         $('.select-result .select-no').show();
         $('.select-result').hide();
-        get_goods_list(1);
+        GetGoodsList(1);
     });
 
     // 排序导航
@@ -67,7 +67,7 @@ $(function()
             $(this).addClass('active');
             $(this).attr('data-type', 'asc');
         }
-        get_goods_list(1);
+        GetGoodsList(1);
     });
 
     // 条件分类组筛选
@@ -100,7 +100,9 @@ $(function()
             $(".theme-popover").css({"position":"static", "top":0});
         }
     });
-    $(document).on("click", ".theme-popover-mask", function()
+
+    // 关闭弹层
+    $('.theme-popover-mask').on('click', function()
     {
         $(".dd-conent").slideUp(300);
         $(".theme-popover-mask").hide();
@@ -109,7 +111,7 @@ $(function()
     
 
     // 导航显示/隐藏处理
-    function search_nav()
+    function SearchNav()
     {
         // 滚动处理导航
         $(window).scroll(function()
@@ -136,7 +138,7 @@ $(function()
     $(window).resize(function()
     {
         // 导航
-        search_nav();
+        SearchNav();
 
         // 条件筛选
         if($(document).width() >= 640)
@@ -144,14 +146,14 @@ $(function()
             $('.dd-conent').show();
         }
     });
-    search_nav();
+    SearchNav();
 
     // 获取商品列表
-    function get_goods_list(page)
+    function GetGoodsList(page)
     {
         // 请求参数处理
         var data = {
-            category_id: $('.search-content').data('category-id') || 0,
+            category_id: $('.search-container').data('category-id') || 0,
             wd: $('#search-input').val() || '',
             page: page || parseInt($('.search-pages-submit').attr('data-page')) || 1,
             order_by_field: $('.sort-nav li.active').attr('data-field') || 'default',
@@ -165,7 +167,7 @@ $(function()
         // 清空数据
         if(data.page == 1)
         {
-            $('.data-list').html('');
+            $('.search-list').html('');
         }
 
         // 页面提示处理
@@ -185,27 +187,13 @@ $(function()
                 $('.loding-view').hide();
                 if(result.code == 0)
                 {
-                    for(var i in result.data.data)
-                    {
-                        var html = '<li class="am-animation-scale-up"><div class="i-pic limit">';
-                            html += '<a href="'+result.data.data[i]['goods_url']+'" target="_blank">';
-                            html += '<img src="'+result.data.data[i]['images']+'" />';
-                            html += '</a>';
-                            html += '<a href="'+result.data.data[i]['goods_url']+'" target="_blank">';
-                            html += '<p class="am-text-truncate title fl">'+result.data.data[i]['title']+'</p>';
-                            html += '</a>';
-                            html += '<p class="price fl"><strong>¥ '+result.data.data[i]['min_price']+'</strong></p>';
-                            html += '<p class="number fl">销量<span>'+result.data.data[i]['sales_count']+'</span></p>';
-                            html += '</div></li>';
-
-                        $('.data-list').append(html);
-                    }
+                    $('.search-list').append(result.data.data);
                     $('.search-pages-submit').attr('data-page', data.page+1);
                     $('.search-pages-submit').attr('disabled', (result.data.page_total <= 1));
                     $('.search-pages-submit').show();
                     $('.table-no').hide();
                 } else if(result.code == -100) {
-                    if($('.data-list li').length == 0)
+                    if($('.search-list li').length == 0)
                     {
                         $('.table-no').show();
                         $('.search-pages-submit').hide();
@@ -229,12 +217,12 @@ $(function()
             }
         });
     }
-    get_goods_list(1);
+    GetGoodsList(1);
 
     // 加载更多数据
     $('.search-pages-submit').on('click', function()
     {
-        get_goods_list();
+        GetGoodsList();
     });
 
 });

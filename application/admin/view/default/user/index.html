@@ -66,17 +66,38 @@
         </form>
         <!-- form end -->
 
-        <!-- operation start -->
-        <div class="am-g m-t-15">
+        <!-- top operation start -->
+        <div class="am-g am-margin-top-sm">
             <a href="{{:MyUrl('admin/user/saveinfo')}}" class="am-btn am-btn-secondary am-radius am-btn-xs am-icon-plus"> 新增</a>
             {{if !IsMobile()}}
-            	<a href="{{$excel_url}}" class="am-btn am-btn-success am-btn-xs m-l-10 am-icon-file-excel-o am-radius"> 导出Excel</a>
+                <a href="{{$excel_url}}" class="am-btn am-btn-success am-btn-xs am-margin-left-sm am-icon-file-excel-o am-radius"> 导出Excel</a>
             {{/if}}
+
+            <!-- 顶部操作钩子 -->
+            {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
+                <div class="plugins-tag">
+                    <span>plugins_view_admin_user_top_operation</span>
+                </div>
+            {{/if}}
+            {{php}}
+                $hook_name = 'plugins_view_admin_user_top_operation';
+                $hook_data = Hook::listen($hook_name, ['hook_name'=>$hook_name, 'is_backend'=>true]);
+                if(!empty($hook_data) && is_array($hook_data))
+                {
+                    foreach($hook_data as $hook)
+                    {
+                        if(is_string($hook) || is_int($hook))
+                        {
+                            echo htmlspecialchars_decode($hook);
+                        }
+                    }
+                }
+            {{/php}}
         </div>
-        <!-- operation end -->
+        <!-- top operation end -->
 
 		<!-- list start -->
-		<table class="am-table am-table-striped am-table-hover am-text-middle m-t-10 m-l-5">
+		<table class="am-table am-table-striped am-table-hover am-text-middle am-margin-top-sm am-margin-left-xs">
 			<thead>
 				<tr>
 					<th>编号</th>
@@ -143,11 +164,26 @@
 												<dt>支付宝openid</dt>
 												<dd>{{if empty($v['alipay_openid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.alipay_openid}}{{/if}}</dd>
 
+                                                <dt>百度openid</dt>
+                                                <dd>{{if empty($v['baidu_openid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.baidu_openid}}{{/if}}</dd>
+
+                                                <dt>头条openid</dt>
+                                                <dd>{{if empty($v['toutiao_openid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.toutiao_openid}}{{/if}}</dd>
+
+                                                <dt>QQopenid</dt>
+                                                <dd>{{if empty($v['qq_openid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.qq_openid}}{{/if}}</dd>
+
+                                                <dt>QQunionid</dt>
+                                                <dd>{{if empty($v['qq_unionid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.qq_unionid}}{{/if}}</dd>
+
 												<dt>微信openid</dt>
 												<dd>{{if empty($v['weixin_openid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.weixin_openid}}{{/if}}</dd>
 
-												<dt>百度openid</dt>
-												<dd>{{if empty($v['baidu_openid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.baidu_openid}}{{/if}}</dd>
+                                                <dt>微信unionid</dt>
+                                                <dd>{{if empty($v['weixin_unionid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.weixin_unionid}}{{/if}}</dd>
+
+                                                <dt>微信webopenid</dt>
+                                                <dd>{{if empty($v['weixin_web_openid'])}}<span class="cr-ddd">未知</span>{{else /}}{{$v.weixin_web_openid}}{{/if}}</dd>
 
 												<dt>性别</dt>
 												<dd>{{if empty($v['gender_text'])}}<span class="cr-ddd">未设置</span>{{else /}}{{$v.gender_text}}{{/if}}</dd>
@@ -191,6 +227,27 @@
 									<button class="am-btn am-btn-secondary am-btn-xs am-radius am-icon-edit"> 编辑</button>
 								</a>
 								<button class="am-btn am-btn-danger am-btn-xs am-radius am-icon-trash-o submit-delete" data-url="{{:MyUrl('admin/user/delete')}}" data-id="{{$v.id}}"> 删除</button>
+
+                                <!-- 用户列表操作钩子 -->
+                                {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
+                                    <div class="plugins-tag">
+                                        <span>plugins_view_admin_user_list_operation</span>
+                                    </div>
+                                {{/if}}
+                                {{php}}
+                                    $hook_name = 'plugins_view_admin_user_list_operation';
+                                    $hook_data = Hook::listen($hook_name, ['hook_name'=>$hook_name, 'is_backend'=>true, 'id'=>$v['id'], 'data'=>$v]);
+                                    if(!empty($hook_data) && is_array($hook_data))
+                                    {
+                                        foreach($hook_data as $hook)
+                                        {
+                                            if(is_string($hook) || is_int($hook))
+                                            {
+                                                echo htmlspecialchars_decode($hook);
+                                            }
+                                        }
+                                    }
+                                {{/php}}
 							</td>
 						</tr>
 					{{/foreach}}
@@ -201,6 +258,31 @@
             <div class="table-no"><i class="am-icon-warning"></i> 没有相关数据</div>
         {{/if}}
 		<!-- list end -->
+
+        <!-- bottom operation start -->
+        <div class="am-g am-margin-top-sm">
+            <!-- 底部操作钩子 -->
+            {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
+                <div class="plugins-tag">
+                    <span>plugins_view_admin_user_bottom_operation</span>
+                </div>
+            {{/if}}
+            {{php}}
+                $hook_name = 'plugins_view_admin_user_bottom_operation';
+                $hook_data = Hook::listen($hook_name, ['hook_name'=>$hook_name, 'is_backend'=>true]);
+                if(!empty($hook_data) && is_array($hook_data))
+                {
+                    foreach($hook_data as $hook)
+                    {
+                        if(is_string($hook) || is_int($hook))
+                        {
+                            echo htmlspecialchars_decode($hook);
+                        }
+                    }
+                }
+            {{/php}}
+        </div>
+        <!-- bottom operation end -->
 
 		<!-- page start -->
 		{{if !empty($data_list)}}

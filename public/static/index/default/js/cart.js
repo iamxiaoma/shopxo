@@ -1,7 +1,7 @@
 $(function()
 {
     // 计算选择的商品总数和总价
-    function cart_base_total()
+    function CartBaseTotal()
     {
         var total_stock = 0;
         var total_price = 0.00;
@@ -18,7 +18,7 @@ $(function()
             }
         });
         $('.cart-nav .selected-tips strong').text(total_stock);
-        $('.cart-nav .nav-total-price').text('￥'+FomatFloat(total_price));
+        $('.cart-nav .nav-total-price').text(__price_symbol__+FomatFloat(total_price));
         $('.cart-nav input[name="ids"]').val(ids.toString() || 0);
     }
 
@@ -49,7 +49,7 @@ $(function()
             stock = 1;
         }
         self.parents('.stock-tag').find('input').val(stock);
-        self.parents('tr').find('.total-price-content').text('￥'+FomatFloat(stock*price, 2));
+        self.parents('tr').find('.total-price-content').text(__price_symbol__+FomatFloat(stock*price, 2));
 
         // 开启进度条
         $.AMUI.progress.start();
@@ -72,7 +72,7 @@ $(function()
                     self.parents('tr').find('.wap-number').text('x'+stock);
 
                     // 计算选择的商品总数和总价
-                    cart_base_total();
+                    CartBaseTotal();
                 } else {
                     PromptCenter(result.msg);
                 }
@@ -108,41 +108,29 @@ $(function()
     // 全选/反选
     $('.select-all-event').on('click', function()
     {
-        if($(this).prop('checked'))
+        if($(this).find('input').is(':checked'))
         {
-            $(this).next().text('取消');
-            $('.am-table input[type="checkbox"]').each(function(k, v)
-            {
-                if(!$(this).prop('disabled'))
-                {
-                    this.checked = true;
-                }
-            });
+            $(this).find('span.el-text').text('反选');
+            $('.am-table').find('input[type="checkbox"]').not(':disabled').uCheck('check');
         } else {
-            $(this).next().text('全选');
-            $('.am-table input[type="checkbox"]').each(function(k, v)
-            {
-                if(!$(this).prop('disabled'))
-                {
-                    this.checked = false;
-                }
-            });
+            $(this).find('span.el-text').text('全选');
+            $('.am-table').find('input[type="checkbox"]').not(':disabled').uCheck('uncheck');
         }
 
         // 计算选择的商品总数和总价
-        cart_base_total();
+        CartBaseTotal();
     });
 
     // 选择
     $('.am-table input[type="checkbox"]').on('click', function()
     {
         // 计算选择的商品总数和总价
-        cart_base_total();
+        CartBaseTotal();
     });
 
     // 导航固定
     var nav_top = $('.cart-nav').length > 0 ? $('.cart-nav').offset().top : 0;
-    function cart_nav_pop()
+    function CartNavPop()
     {
         var scroll = $(document).scrollTop();
         var location = scroll+$(window).height()-100;
@@ -156,24 +144,24 @@ $(function()
             $('body').css({"padding-bottom":"0"});
         }
     }
-    cart_nav_pop();
+    CartNavPop();
     $(window).scroll(function()
     {
-        cart_nav_pop();
+        CartNavPop();
     });
 
     // 浏览器窗口实时事件
     $(window).resize(function()
     {
         // 导航固定初始化
-        cart_nav_pop();
+        CartNavPop();
     });
 
     // 结算事件
     $('.separate-submit').on('click', function()
     {
         // 计算选择的商品总数和总价
-        cart_base_total();
+        CartBaseTotal();
 
         // 获取购物车id
         var ids = $(this).parents('form').find('input[name="ids"]').val() || 0;

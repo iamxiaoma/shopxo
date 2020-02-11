@@ -12,7 +12,7 @@
             <!-- 图片1 -->
             <div class="am-panel am-panel-default">
                 <div class="am-panel-hd">
-                    <span class="am-panel-title">图片1</span>
+                    <h3 class="am-panel-title">图片1</h3>
                 </div>
                 <div class="am-panel-bd">
                     <div class="am-form-group">
@@ -21,7 +21,7 @@
                             {{if !empty($data['home_site_user_forgetpwd_ad1_images']['value'])}}
                                 <li>
                                     <input type="text" name="home_site_user_forgetpwd_ad1_images" value="{{$data.home_site_user_forgetpwd_ad1_images.value}}" />
-                                    <img src="{{$Think.__MY_PUBLIC_URL__}}{{$data.home_site_user_forgetpwd_ad1_images.value}}" />
+                                    <img src="{{:AttachmentPathViewHandle($data.home_site_user_forgetpwd_ad1_images.value)}}" />
                                     <i>×</i>
                                 </li>
                             {{/if}}
@@ -47,7 +47,7 @@
             <!-- 图片2 -->
             <div class="am-panel am-panel-default">
                 <div class="am-panel-hd">
-                    <span class="am-panel-title">图片2</span>
+                    <h3 class="am-panel-title">图片2</h3>
                 </div>
                 <div class="am-panel-bd">
                     <div class="am-form-group">
@@ -56,7 +56,7 @@
                             {{if !empty($data['home_site_user_forgetpwd_ad2_images']['value'])}}
                                 <li>
                                     <input type="text" name="home_site_user_forgetpwd_ad2_images" value="{{$data.home_site_user_forgetpwd_ad2_images.value}}" />
-                                    <img src="{{$Think.__MY_PUBLIC_URL__}}{{$data.home_site_user_forgetpwd_ad2_images.value}}" />
+                                    <img src="{{:AttachmentPathViewHandle($data.home_site_user_forgetpwd_ad2_images.value)}}" />
                                     <i>×</i>
                                 </li>
                             {{/if}}
@@ -82,7 +82,7 @@
             <!-- 图片3 -->
             <div class="am-panel am-panel-default">
                 <div class="am-panel-hd">
-                    <span class="am-panel-title">图片3</span>
+                    <h3 class="am-panel-title">图片3</h3>
                 </div>
                 <div class="am-panel-bd">
                     <div class="am-form-group">
@@ -91,7 +91,7 @@
                             {{if !empty($data['home_site_user_forgetpwd_ad3_images']['value'])}}
                                 <li>
                                     <input type="text" name="home_site_user_forgetpwd_ad3_images" value="{{$data.home_site_user_forgetpwd_ad3_images.value}}" />
-                                    <img src="{{$Think.__MY_PUBLIC_URL__}}{{$data.home_site_user_forgetpwd_ad3_images.value}}" />
+                                    <img src="{{:AttachmentPathViewHandle($data.home_site_user_forgetpwd_ad3_images.value)}}" />
                                     <i>×</i>
                                 </li>
                             {{/if}}
@@ -126,4 +126,4 @@
         
 <!-- footer start -->
 {{include file="public/footer" /}}
-<!-- footer end
+<!-- footer end -->

@@ -173,20 +173,39 @@
                 <!-- 基础面板 -->
                 <div class="tb-detail-price">
                     {{if isset($goods['original_price']) and $goods['original_price'] gt 0 and !empty($goods['show_field_original_price_text'])}}
-                        <div class="items price iteminfo_price">
+                        <!-- 原价 -->
+                        <div class="items price">
                             <dt>{{$goods.show_field_original_price_text|raw}}</dt>
                             <dd>
-                                <b class="sys_item_mktprice">¥ {{$goods.original_price}}</b>
+                                <b class="goods-original-price original-price-value" data-original-price="{{$goods.original_price}}">{{$price_symbol}}{{$goods.original_price}}</b>
                             </dd>
                         </div>
                     {{/if}}
+
+                    <!-- 商品页面基础信息面板售价顶部钩子 -->
+                    {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
+                        <div class="plugins-tag">
+                            <span>plugins_view_goods_detail_panel_price_top</span>
+                        </div>
+                    {{/if}}
+                    {{if !empty($plugins_view_goods_detail_panel_price_top_data) and is_array($plugins_view_goods_detail_panel_price_top_data)}}
+                        {{foreach $plugins_view_goods_detail_panel_price_top_data as $hook}}
+                            {{if is_string($hook) or is_int($hook)}}
+                                {{$hook|raw}}
+                            {{/if}}
+                        {{/foreach}}
+                    {{/if}}
+
+                    <!-- 售价 -->
                     <div class="items price iteminfo_mktprice">
                         <dt>{{if empty($goods['show_field_price_text'])}}销售价{{else /}}{{$goods.show_field_price_text|raw}}{{/if}}</dt>
                         <dd>
-                            <em>¥</em>
-                            <b class="sys_item_price" data-original-price="{{$goods.price}}">{{$goods.price}}</b>
+                            <em>{{$price_symbol}}</em>
+                            <b class="goods-price" data-original-price="{{$goods.price}}">{{$goods.price}}</b>
                         </dd>                                 
                     </div>
+
+                    <!-- 二维码 -->
                     <div class="goods-qrcode am-hide-sm-only">
                         <i class="am-icon-qrcode am-icon-sm"></i>
                         <img class="qrcode-images am-img-thumbnail" src="{{$qrcode_url}}" />
@@ -264,10 +283,10 @@
                                                 <dd>
                                                     <div class="am-input-group am-input-group-sm number-tag">
                                                         <button class="am-input-group-label" id="min" type="button">-</button>
-                                                        <input type="number" class="am-form-field" value="1" id="text_box" min="1" max="{{$goods.inventory}}" data-original-max="{{$goods.inventory}}" />
+                                                        <input type="number" class="am-form-field" value="{{$goods.buy_min_number}}" id="text_box" min="{{$goods.buy_min_number}}" max="{{if empty($goods['buy_max_number'])}}{{$goods.inventory}}{{else /}}{{$goods.buy_max_number}}{{/if}}" data-original-max="{{$goods.inventory}}" />
                                                         <button class="am-input-group-label" id="add" type="button">+</button>
                                                     </div>
-                                                    <span class="tb-hidden stock-tips">库存<span class="stock" data-original-stock="{{$goods.inventory}}">{{$goods.inventory}}</span>{{$goods.inventory_unit}}</span>
+                                                    <span class="tb-hidden stock-tips">库存<span class="stock" data-original-stock="{{$goods.inventory}}" data-min-limit="{{$goods.buy_min_number}}" data-max-limit="{{$goods.buy_max_number}}" data-unit="{{$goods.inventory_unit}}">{{$goods.inventory}}</span>{{$goods.inventory_unit}}</span>
                                                 </dd>
                                             </div>
 
@@ -281,7 +300,7 @@
                                                 <img src="{{$goods.images}}" />
                                             </div>
                                             <div class="text-info">
-                                                <span class="price-now" data-original-price="{{$goods.price}}">¥{{$goods.price}}</span>
+                                                <span class="price-now" data-original-price="{{$goods.price}}">{{$price_symbol}}{{$goods.price}}</span>
                                             </div>
                                         </div>
                                     </form>
@@ -293,43 +312,78 @@
             </div>
 
             <!-- 购买导航 -->
-            <div class="buy-nav">
+            <div class="buy-nav {{if $common_site_type eq 1}}exhibition-nav{{/if}}">
                 {{if !empty($goods.is_shelves)}}
                     {{if $goods['inventory'] gt 0}}
                         <div class="buy-nav-opt">
                             <a href="{{$Think.__MY_URL__}}">
-                                <span class="am-icon-home am-icon-fw"> 首页</span>
+                                <span class="nav-icon nav-icon-home">
+                                    <i class="am-icon-home am-icon-fw"></i>
+                                    <em>首页</em>
+                                </span>
                             </a>
+
                             {{if isset($goods['is_favor']) and $goods['is_favor'] eq 1}}
-                                <span class="am-icon-heart am-icon-fw login-event favor-submit text-active" data-ajax-url="{{:MyUrl('index/goods/favor')}}">
+                                <span class="nav-icon login-event favor-submit text-active" data-ajax-url="{{:MyUrl('index/goods/favor')}}">
+                                    <i class="am-icon-heart am-icon-fw"></i>
                                     <em class="goods-favor-text">已收藏</em>
                                     <em class="goods-favor-count">({{$goods.favor_count}})</em>
                                 </span>
                             {{else /}}
-                                <span class="am-icon-heart am-icon-fw favor-submit login-event" data-ajax-url="{{:MyUrl('index/goods/favor')}}">    <em class="goods-favor-text">收藏</em>
+                                <span class="nav-icon favor-submit login-event" data-ajax-url="{{:MyUrl('index/goods/favor')}}">
+                                    <i class="am-icon-heart am-icon-fw"></i>
+                                    <em class="goods-favor-text">收藏</em>
                                     <em class="goods-favor-count">({{$goods.favor_count}})</em>
                                 </span>
                             {{/if}}
-                        </div>
-                        <div class="submit">
-                            <div class="clearfix tb-btn tb-btn-buy buy-event login-event buy-submit" data-type="buy">
-                                <button title="点此按钮到下一步确认购买信息" href="javascript:;" type="button">立即购买</button>
-                            </div>
-                        </div>
-                        <div class="submit">
-                            <div class="clearfix tb-btn tb-btn-basket buy-event login-event cart-submit" data-type="cart"  data-ajax-url="{{:MyUrl('index/Cart/Save')}}">
-                                <button title="加入购物车" href="javascript:;" type="button"><i></i>加入购物车</button>
-                            </div>
+
+                            <!-- 商品页面基础信息购买小导航里面钩子 -->
+                            {{if isset($shopxo_is_develop) and $shopxo_is_develop eq true and (!isset($is_footer) or $is_footer eq 1)}}
+                                <div class="plugins-tag">
+                                    <span>plugins_view_goods_detail_base_buy_nav_min_inside</span>
+                                </div>
+                            {{/if}}
+                            {{if !empty($plugins_view_goods_detail_base_buy_nav_min_inside_data) and is_array($plugins_view_goods_detail_base_buy_nav_min_inside_data)}}
+                                {{foreach $plugins_view_goods_detail_base_buy_nav_min_inside_data as $hook}}
+                                    {{if is_string($hook) or is_int($hook)}}
+                                        {{$hook|raw}}
+                                    {{/if}}
+                                {{/foreach}}
+                            {{/if}}
                         </div>
 
-                        <!-- 购买表单 -->
-                        <form action="{{:MyUrl('index/buy/index')}}" method="post" class="buy-form">
-                            <input type="hidden" name="goods_id" value="{{$goods.id}}" />
-                            <input type="hidden" name="buy_type" value="goods" />
-                            <input type="hidden" name="stock" value="1" />
-                            <input type="hidden" name="spec" value="" />
-                            <button type="submit"></button>
-                        </form>
+                        <!-- 站点模式 1 展示型 -->
+                        {{if $common_site_type eq 1}}
+                            <div class="submit">
+                                <div class="clearfix tb-btn tb-btn-basket" data-type="cart"  data-ajax-url="{{:MyUrl('index/Cart/Save')}}">
+                                    <a href="{{if empty($common_customer_store_tel)}}javascript:;{{else /}}tel:{{$common_customer_store_tel}}{{/if}}">
+                                        <button title="{{$common_is_exhibition_mode_btn_text}}" href="javascript:;" type="button"><i class="am-icon-phone"></i> {{$common_is_exhibition_mode_btn_text}}</button>
+                                    </a>
+                                </div>
+                            </div>
+
+                        <!-- 销售型,自提点,虚拟销售 -->
+                        {{else /}}
+                            <div class="submit">
+                                <div class="clearfix tb-btn tb-btn-buy buy-event login-event buy-submit" data-type="buy">
+                                    <button title="点此按钮到下一步确认购买信息" href="javascript:;" type="button">{{if $common_order_is_booking eq 1}}立即预约{{else /}}立即购买{{/if}}</button>
+                                </div>
+                            </div>
+                            <div class="submit">
+                                <div class="clearfix tb-btn tb-btn-basket buy-event login-event cart-submit" data-type="cart"  data-ajax-url="{{:MyUrl('index/Cart/Save')}}">
+                                    <button title="加入购物车" href="javascript:;" type="button"><i></i>加入购物车</button>
+                                </div>
+                            </div>
+
+                            <!-- 购买表单 -->
+                            <form action="{{:MyUrl('index/buy/index')}}" method="post" class="buy-form">
+                                <input type="hidden" name="goods_id" value="{{$goods.id}}" />
+                                <input type="hidden" name="buy_type" value="goods" />
+                                <input type="hidden" name="stock" value="1" />
+                                <input type="hidden" name="spec" value="" />
+                                <button type="submit"></button>
+                            </form>
+                        {{/if}}
                     {{else /}}
                         <p class="goods-not-buy-tips">商品卖光了</p>
                     {{/if}}
@@ -386,10 +440,10 @@
                                         <img alt="{{$v.title}}" src="{{$v.images}}">
                                     </a>               
                                 </div>
-                                <div class="p-name">
+                                <div class="p-name am-text-truncate-2 am-margin-vertical-xs ">
                                     <a href="{{:$v['goods_url']}}" {{if !empty($v.title_color)}}style="color:{{$v.title_color}};"{{/if}}>{{$v.title}}</a>
                                 </div>
-                                <div class="p-price"><strong>￥{{$v.price}}</strong></div>
+                                <div class="p-price"><strong>{{$price_symbol}}{{$v.price}}</strong></div>
                             </li>
                           {{/foreach}}
                       {{/if}}
@@ -452,17 +506,29 @@
                             </div>
                         {{/if}}
 
+                        <!-- 详情内容 -->
                         <div class="details">
                             <div class="spacing-nav-title">
                                 <span class="line"></span>
                                 <span class="text-wrapper">商品细节</span>
                             </div>
-                            <div class="detail-content">{{$goods.content_web|raw}}</div>
+                            <div class="detail-content">
+                                {{if isset($common_is_goods_detail_show_photo) and $common_is_goods_detail_show_photo eq 1 and !empty($goods.photo)}}
+                                    <div class="content-photo">
+                                        {{foreach $goods.photo as $photo}}
+                                            <li>
+                                                <img src="{{$photo.images}}" title="{{$goods.title}}" />
+                                            </li>
+                                        {{/foreach}}
+                                    </div>
+                                {{/if}}
+                                <div class="content-web">{{$goods.content_web|raw}}</div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- 评论 -->
-                    <div class="am-tab-panel am-fade goods-comment" data-goods-id="{{$goods.id}}" data-url="{{:MyUrl('index/goods/comment')}}">
+                    <div class="am-tab-panel am-fade goods-comment" data-goods-id="{{$goods.id}}" data-url="{{:MyUrl('index/goods/comments')}}">
                         <div class="am-cf score-container">
                             <div class="score am-fl">
                                 <p class="name">动态评分</p>
@@ -471,22 +537,24 @@
                             <div class="am-progress am-fr">
                                 {{if isset($goods_score['avg']) and $goods_score['avg'] gt 0 and !empty($goods_score['rating'])}}
                                     {{foreach $goods_score.rating as $score}}
-                                        <div class="am-progress-bar 
-                                            {{switch score.rating}}
-                                                {{case 1}}
-                                                    am-progress-bar-danger
-                                                {{/case}}
-                                                {{case 2}}
-                                                    am-progress-bar-warning
-                                                {{/case}}
-                                                {{case 3}}
-                                                    am-progress-bar-secondary
-                                                {{/case}}
-                                                {{case 5}}
-                                                    am-progress-bar-success
-                                                {{/case}}
-                                            {{/switch}}"
-                                            style="width: {{$score.portion}}%">{{$score.name}}({{$score.portion}}%)</div>
+                                        {{if $score.portion gt 0}}
+                                            <div class="am-progress-bar 
+                                                {{switch score.rating}}
+                                                    {{case 1}}
+                                                        am-progress-bar-danger
+                                                    {{/case}}
+                                                    {{case 2}}
+                                                        am-progress-bar-warning
+                                                    {{/case}}
+                                                    {{case 3}}
+                                                        am-progress-bar-secondary
+                                                    {{/case}}
+                                                    {{case 5}}
+                                                        am-progress-bar-success
+                                                    {{/case}}
+                                                {{/switch}}"
+                                                style="width: {{$score.portion}}%">{{$score.name}}({{$score.portion}}%)</div>
+                                            {{/if}}
                                     {{/foreach}}
                                 {{else /}}
                                     没有评分数据
@@ -513,10 +581,10 @@
                                                     <img alt="{{$v.title}}" src="{{$v.home_recommended_images}}" />
                                                 </a>
                                                 <a href="{{:$v['goods_url']}}">
-                                                    <p class="am-text-truncate" {{if !empty($v.title_color)}}style="color:{{$v.title_color}};"{{/if}}>{{$v.title}}</p>
+                                                    <p class="am-text-truncate-2 am-margin-bottom-xs" {{if !empty($v.title_color)}}style="color:{{$v.title_color}};"{{/if}}>{{$v.title}}</p>
                                                 </a>
                                                 <p class="price fl">
-                                                    <strong>¥{{$v.price}}</strong>
+                                                    <strong>{{$price_symbol}}{{$v.price}}</strong>
                                                 </p>
                                             </div>
                                         </li>

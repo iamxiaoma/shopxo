@@ -76,22 +76,22 @@ class Common extends Controller
     private function CommonPluginsInit()
     {
         // css钩子
-        $this->assign('plugins_admin_css_data', Hook::listen('plugins_admin_css', ['hook_name'=>'plugins_admin_css', 'is_backend'=>false]));
+        $this->assign('plugins_admin_css_data', Hook::listen('plugins_admin_css', ['hook_name'=>'plugins_admin_css', 'is_backend'=>true]));
 
         // js钩子
-        $this->assign('plugins_admin_js_data', Hook::listen('plugins_admin_js', ['hook_name'=>'plugins_admin_js', 'is_backend'=>false]));
+        $this->assign('plugins_admin_js_data', Hook::listen('plugins_admin_js', ['hook_name'=>'plugins_admin_js', 'is_backend'=>true]));
         
         // 公共header内钩子
-        $this->assign('plugins_admin_common_header_data', Hook::listen('plugins_admin_common_header', ['hook_name'=>'plugins_admin_common_header', 'is_backend'=>false, 'admin'=>$this->admin]));
+        $this->assign('plugins_admin_common_header_data', Hook::listen('plugins_admin_common_header', ['hook_name'=>'plugins_admin_common_header', 'is_backend'=>true, 'admin'=>$this->admin]));
 
         // 公共页面底部钩子
-        $this->assign('plugins_admin_common_page_bottom_data', Hook::listen('plugins_admin_common_page_bottom', ['hook_name'=>'plugins_admin_common_page_bottom', 'is_backend'=>false, 'admin'=>$this->admin]));
+        $this->assign('plugins_admin_common_page_bottom_data', Hook::listen('plugins_admin_common_page_bottom', ['hook_name'=>'plugins_admin_common_page_bottom', 'is_backend'=>true, 'admin'=>$this->admin]));
 
         // 公共顶部钩子
-        $this->assign('plugins_admin_view_common_top_data', Hook::listen('plugins_admin_view_common_top', ['hook_name'=>'plugins_admin_view_common_top', 'is_backend'=>false, 'admin'=>$this->admin]));
+        $this->assign('plugins_admin_view_common_top_data', Hook::listen('plugins_admin_view_common_top', ['hook_name'=>'plugins_admin_view_common_top', 'is_backend'=>true, 'admin'=>$this->admin]));
 
         // 公共底部钩子
-        $this->assign('plugins_admin_view_common_bottom_data', Hook::listen('plugins_admin_view_common_bottom', ['hook_name'=>'plugins_admin_view_common_bottom', 'is_backend'=>false, 'admin'=>$this->admin]));
+        $this->assign('plugins_admin_view_common_bottom_data', Hook::listen('plugins_admin_view_common_bottom', ['hook_name'=>'plugins_admin_view_common_bottom', 'is_backend'=>true, 'admin'=>$this->admin]));
     }
 
 	/**
@@ -154,6 +154,9 @@ class Common extends Controller
         $this->assign('controller_name', $controller_name);
         $this->assign('action_name', $action_name);
 
+        // 价格符号
+        $this->assign('price_symbol', config('shopxo.price_symbol'));
+
 		// 控制器静态文件状态css,js
         $module_css = $module_name.DS.$default_theme.DS.'css'.DS.$controller_name;
         $module_css .= file_exists(ROOT_PATH.'static'.DS.$module_css.'.'.$action_name.'.css') ? '.'.$action_name.'.css' : '.css';
@@ -174,6 +177,9 @@ class Common extends Controller
 
         // 开发模式
         $this->assign('shopxo_is_develop', config('shopxo.is_develop'));
+
+        // 默认不加载百度地图api
+        $this->assign('is_load_baidu_map_api', 0);
 	}
 
 	/**

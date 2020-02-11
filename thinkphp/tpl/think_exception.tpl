@@ -88,12 +88,13 @@
             font: 16px Verdana, "Helvetica Neue", helvetica, Arial, 'Microsoft YaHei', sans-serif;
             margin: 0;
             padding: 0 20px 20px;
+            
         }
         h1{
             margin: 10px 0 0;
             font-size: 28px;
             font-weight: 500;
-            line-height: 32px;
+            line-height: 40px;
         }
         h2{
             color: #4288ce;
@@ -114,8 +115,9 @@
             text-decoration-style: dotted;
         }
         a{
-            color: #868686;
+            color: #888;
             cursor: pointer;
+            text-decoration: none;
         }
         a:hover{
             text-decoration: underline;
@@ -258,12 +260,27 @@
         .exception-var table td pre{
             margin: 0;
         }
+        .exception .error-message h1 {
+            text-align: center;
+            margin-top: 10%;
+        }
 
         /* Copyright Info */
         .copyright{
-            margin-top: 24px;
+            margin-top: 30px;
             padding: 12px 0;
-            border-top: 1px solid #eee;
+            text-align: center;
+        }
+        .copyright a{
+            color: #F44336;
+            cursor: pointer;
+            text-decoration: none;
+            padding: 10px 15px;
+            border: 1px solid #F44336;
+        }
+        .copyright a:hover{
+            background: #F44336;
+            color: #fff;
         }
 
         /* SPAN elements with the classes below are added by prettyprint. */
@@ -280,9 +297,6 @@
         pre.prettyprint .atv { color: #080 }  /* a markup attribute value */
         pre.prettyprint .dec, pre.prettyprint .var { color: #606 }  /* a declaration; a variable name */
         pre.prettyprint .fun { color: red }  /* a function name */
-
-        /* bbs */
-        .bbs-ask { margin-left: 15px; }
     </style>
 </head>
 <body>
@@ -336,9 +350,7 @@
     </div>
     <?php } else { ?>
     <div class="exception">
-        
-            <div class="info"><h1><?php echo htmlentities($message); ?></h1></div>
-        
+        <div class="info error-message"><h1><?php echo htmlentities($message); ?></h1></div>
     </div>
     <?php } ?>
     
@@ -412,12 +424,16 @@
     </div>
     <?php } ?>
 
-    <div class="copyright">
-        <a title="<?php echo implode('', ['S','h','o','p','X','O']); ?>官网" href="<?php echo implode('', ['h','t','t','p',':','/','/','w','w','w','.','s','h','o','p','x','o','.','n','e','t']); ?>"target="_blank"><?php echo implode('', ['S','h','o','p','X','O']); ?>官网</a>
-        <span><?php echo APPLICATION_VERSION; ?></span>
-        <a title="<?php echo implode('', ['S','h','o','p','X','O']); ?>社区" href="<?php echo implode('', ['h','t','t','p',':','/','/','a','s','k','.','s','h','o','p','x','o','.','n','e','t']); ?>" target="_blank" class="bbs-ask"><?php echo implode('', ['S','h','o','p','X','O']); ?>社区</a>
-        <span>{ 国内领先企业级B2C免费开源电商系统！ }</span>
-    </div>
+    <?php if(\think\facade\App::isDebug()) { ?>
+        <div class="copyright">
+            <a title="<?php echo implode('', ['S','h','o','p','X','O','企','业','级','免','费','开','源','商','城','系','统']); ?>" href="<?php echo implode('', ['h','t','t','p','s',':','/','/','s','h','o','p','x','o','.','n','e','t','/']); ?>" target="_blank"><?php echo implode('', ['S','h','o','p','X','O','企','业','级','免','费','开','源','商','城','系','统']); ?></a>
+        </div>
+    <?php } else { ?>
+        <div class="copyright">
+            <a title="<?php echo implode('', ['S','h','o','p','X','O','企','业','级','免','费','开','源','商','城','系','统']); ?>" href="<?php echo implode('', ['h','t','t','p','s',':','/','/','a','s','k','.','s','h','o','p','x','o','.','n','e','t','/','q','u','e','s','t','i','o','n','/','7']); ?>" target="_blank"><?php echo implode('', ['查','看','解','决','方','案']); ?></a>
+        </div>
+    <?php } ?>
+
     <?php if(\think\facade\App::isDebug()) { ?>
     <script>
         var LINE = <?php echo $line; ?>;

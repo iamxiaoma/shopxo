@@ -118,16 +118,8 @@ class OrderAftersaleService
             [
                 'checked_type'      => 'length',
                 'key_name'          => 'msg',
-                'checked_data'      => '5,200',
-                'error_msg'         => '退款说明 5~200 个字符之间',
-            ],
-            [
-                'checked_type'      => 'length',
-                'key_name'          => 'images',
-                'data_type'         => 'array',
-                'is_checked'        => 1,
-                'checked_data'      => '3',
-                'error_msg'         => '凭证图片不能超过3张',
+                'checked_data'      => '200',
+                'error_msg'         => '退款说明最多 200 个字符',
             ],
             [
                 'checked_type'      => 'empty',
@@ -158,7 +150,7 @@ class OrderAftersaleService
         $count = (int) Db::name('OrderAftersale')->where($where)->count();
         if($count > 0)
         {
-            return DataReturn('当前订单商品售后正在进行中，请勿重复申请', -1);
+            return DataReturn('订单售后正在进行中，请勿重复申请', -1);
         }
 
         // 获取历史申请售后条件
@@ -194,11 +186,19 @@ class OrderAftersaleService
 
         // 附件处理
         $images = [];
-        if(!empty($params['images']) && is_array($params['images']))
+        if(!empty($params['images']))
         {
+            if(!is_array($params['images']))
+            {
+                $params['images'] = json_decode(htmlspecialchars_decode($params['images']), true);
+            }
             foreach($params['images'] as $v)
             {
                 $images[] = ResourcesService::AttachmentPathHandle($v);
+            }
+            if(count($images) > 3)
+            {
+                return DataReturn('凭证图片不能超过3张', -1);
             }
         }
 
@@ -227,7 +227,7 @@ class OrderAftersaleService
     }
 
     /**
-     * 
+     * 用户退货
      * @author  Devil
      * @blog    http://gong.gg/
      * @version 1.0.0
@@ -777,6 +777,14 @@ class OrderAftersaleService
             }
         }
 
+        // 是否仅退款操作需要退数量操作
+        $is_refund_only_number = false;
+        if($aftersale['type'] == 0 && $order['data']['status'] <= 2)
+        {
+            $is_refund_only_number = true;
+            $aftersale['number'] = $order['data']['items']['buy_number'];
+        }
+
         // 更新主订单
         $refund_price = PriceNumberFormat($order['data']['refund_price']+$aftersale['price']);
         $returned_quantity = intval($order['data']['returned_quantity']+$aftersale['number']);
@@ -787,11 +795,14 @@ class OrderAftersaleService
             'close_time'        => time(),
             'upd_time'          => time(),
         ];
+
         // 如果退款金额和退款数量到达订单实际是否金额和购买数量则关闭订单
         if($refund_price >= $order['data']['pay_price'] && $returned_quantity >= $order['data']['buy_number_count'])
         {
             $order_upd_data['status'] = 6;
         }
+        
+        // 更新主订单
         if(!Db::name('Order')->where(['id'=>$order['data']['id']])->update($order_upd_data))
         {
             Db::rollback();
@@ -811,7 +822,7 @@ class OrderAftersaleService
         }
 
         // 库存回滚
-        if($aftersale['type'] == 1)
+        if($aftersale['type'] == 1 || $is_refund_only_number == true)
         {
             $ret = BuyService::OrderInventoryRollback(['order_id'=>$order['data']['id'], 'order_data'=>$order_upd_data, 'appoint_order_detail_id'=>$aftersale['order_detail_id'], 'appoint_buy_number'=>$aftersale['number']]);
             if($ret['code'] != 0)
@@ -840,6 +851,12 @@ class OrderAftersaleService
             'audit_time'    => time(),
             'upd_time'      => time(),
         ];
+
+        // 仅退款是否退了数量
+        if($is_refund_only_number == true)
+        {
+            $aftersale_upd_data['number'] = $aftersale['number'];
+        }
         if(!Db::name('OrderAftersale')->where(['id'=>$aftersale['id']])->update($aftersale_upd_data))
         {
             Db::rollback();
@@ -848,12 +865,12 @@ class OrderAftersaleService
 
         // 订单售后审核处理完毕钩子
         $hook_name = 'plugins_service_order_aftersale_audit_handle_end';
-        $ret = Hook::listen($hook_name, [
+        $ret = HookReturnHandle(Hook::listen($hook_name, [
             'hook_name'     => $hook_name,
             'is_backend'    => true,
             'params'        => $params,
             'order_id'      => $order['data']['id'],
-        ]);
+        ]));
         if(isset($ret['code']) && $ret['code'] != 0)
         {
             Db::rollback();
@@ -895,10 +912,12 @@ class OrderAftersaleService
         // 操作退款
         $pay_name = 'payment\\'.$pay_log['payment'];
         $pay_params = [
+            'order_id'          => $order['id'],
             'order_no'          => $order['order_no'],
             'trade_no'          => $pay_log['trade_no'],
             'pay_price'         => $order['pay_price'],
             'refund_price'      => $aftersale['price'],
+            'client_type'       => $order['client_type'],
             'refund_reason'     => $order['order_no'].'订单退款'.$aftersale['price'].'元',
         ];
         $ret = (new $pay_name($payment[0]['config']))->Refund($pay_params);
@@ -1205,6 +1224,123 @@ class OrderAftersaleService
         }
 
         return DataReturn('操作成功', 0, ['returned_quantity'=>$returned_quantity, 'refund_price'=>PriceNumberFormat($refund_price)]);
+    }
+
+    /**
+     * 订单售后提示信息
+     * @author   Devil
+     * @blog     http://gong.gg/
+     * @version  1.0.0
+     * @datetime 2019-10-04T13:56:35+0800
+     * @desc     description
+     * @param    [array]             $orderaftersale [订单售后数据]
+     */
+    public static function OrderAftersaleTipsMsg($orderaftersale = [])
+    {
+        $msg_all = [
+            0 => '订单售后已提交申请，等待管理员确认中！',
+            1 => '订单售后，管理员已确认，请尽快完成退货！',
+            2 => '订单售后已退货，等待管理员审核中！',
+            3 => '订单售后已处理结束！',
+            4 => '订单售后申请已被拒绝！',
+            5 => '订单售后申请已关闭！',
+        ];
+        if(isset($orderaftersale['status']) && array_key_exists($orderaftersale['status'], $msg_all))
+        {
+            // [status 待退货], [type 0仅退款 1退货退款
+            if($orderaftersale['status'] == 1 && $orderaftersale['type'] == 0)
+            {
+                $msg_all[1] = $msg_all[0];
+            }
+            return $msg_all[$orderaftersale['status']];
+        }
+        return '';
+    }
+
+    /**
+     * 订单售后进度
+     * @author   Devil
+     * @blog     http://gong.gg/
+     * @version  1.0.0
+     * @datetime 2019-10-04T15:22:06+0800
+     * @desc     description
+     * @param    [array]             $orderaftersale [订单售后数据]
+     */
+    public static function OrderAftersaleStep($orderaftersale)
+    {
+        // 仅退款
+        $step0 = [
+            [
+                'number'    => 1,
+                'name'      => '申请仅退款',
+                'is_caret'  => 1,
+                'is_angle'  => 1,
+                'is_active' => 1,
+                'is_end'    => (empty($orderaftersale) || $orderaftersale['status'] > 3) ? 1 : 0,
+            ],
+            [
+                'number'    => 2,
+                'name'      => '管理员审核',
+                'is_caret'  => (isset($orderaftersale['status']) && in_array($orderaftersale['status'], [0,1,2,3])) ? 1 : 0,
+                'is_angle'  => 1,
+                'is_active' => (isset($orderaftersale['status']) && in_array($orderaftersale['status'], [0,1,2,3])) ? 1 : 0,
+                'is_end'    => (isset($orderaftersale['status']) && $orderaftersale['status'] <= 2) ? 1 : 0,
+            ],
+            [
+                'number'    => 3,
+                'name'      => '退款完毕',
+                'is_caret'  => 0,
+                'is_angle'  => 0,
+                'is_active' => (isset($orderaftersale['status']) && $orderaftersale['status'] == 3) ? 1 : 0,
+                'is_end'    => 0,
+            ]
+        ];
+
+        // 退货退款
+        $step1 = [
+            [
+                'number'    => 1,
+                'name'      => '申请退货退款',
+                'is_caret'  => 1,
+                'is_angle'  => 1,
+                'is_active' => 1,
+                'is_end'    => (empty($orderaftersale) || $orderaftersale['status'] > 3) ? 1 : 0,
+            ],
+            [
+                'number'    => 2,
+                'name'      => '管理员确认',
+                'is_caret'  => (isset($orderaftersale['status']) && in_array($orderaftersale['status'], [0,1,2])) ? 1 : 0,
+                'is_angle'  => 1,
+                'is_active' => (isset($orderaftersale['status']) && in_array($orderaftersale['status'], [0,1,2,3])) ? 1 : 0,
+                'is_end'    => (isset($orderaftersale['status']) && $orderaftersale['status'] == 0) ? 1 : 0,
+            ],
+            [
+                'number'    => 3,
+                'name'      => '用户退货',
+                'is_caret'  => (isset($orderaftersale['status']) && in_array($orderaftersale['status'], [1,2,3])) ? 1 : 0,
+                'is_angle'  => 1,
+                'is_active' => (isset($orderaftersale['status']) && in_array($orderaftersale['status'], [1,2,3])) ? 1 : 0,
+                'is_end'    => (isset($orderaftersale['status']) && $orderaftersale['status'] == 1) ? 1 : 0,
+            ],
+            [
+                'number'    => 4,
+                'name'      => '管理员审核',
+                'is_caret'  => (isset($orderaftersale['status']) && in_array($orderaftersale['status'], [2,3])) ? 1 : 0,
+                'is_angle'  => 1,
+                'is_active' => (isset($orderaftersale['status']) && in_array($orderaftersale['status'], [2,3])) ? 1 : 0,
+                'is_end'    => (isset($orderaftersale['status']) && $orderaftersale['status'] == 2) ? 1 : 0,
+            ],
+            [
+                'number'    => 5,
+                'name'      => '退款完毕',
+                'is_caret'  => 0,
+                'is_angle'  => 0,
+                'is_active' => (isset($orderaftersale['status']) && $orderaftersale['status'] == 3) ? 1 : 0,
+                'is_end'    => 0,
+            ]
+        ];
+        
+        return ['step0'=>$step0, 'step1'=>$step1];
     }
 }
 ?>

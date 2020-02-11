@@ -186,7 +186,7 @@ class GoodsService
             foreach($goods_category as &$v)
             {
                 $category_ids = self::GoodsCategoryItemsIds([$v['id']], 1);
-                $goods = self::CategoryGoodsList(['where'=>['gci.category_id'=>$category_ids, 'is_home_recommended'=>1], 'm'=>0, 'n'=>8, 'field'=>'g.id,g.title,g.title_color,g.images,g.home_recommended_images,g.original_price,g.price,g.min_price,g.max_price,g.inventory,g.buy_min_number,g.buy_max_number']);
+                $goods = self::CategoryGoodsList(['where'=>['gci.category_id'=>$category_ids, 'g.is_home_recommended'=>1, 'g.is_shelves'=>1], 'm'=>0, 'n'=>8, 'field'=>'g.*']);
                 $v['goods'] = $goods['data'];
             }
         }
@@ -202,23 +202,25 @@ class GoodsService
      * @desc    description
      * @param   [array]          $ids       [分类id数组]
      * @param   [int]            $is_enable [是否启用 null, 0否, 1是]
+     * @param   [string]         $order_by  [排序, 默认sort asc]
      */
-    public static function GoodsCategoryItemsIds($ids = [], $is_enable = null)
+    public static function GoodsCategoryItemsIds($ids = [], $is_enable = null, $order_by = 'sort asc')
     {
         $where = ['pid'=>$ids];
         if($is_enable !== null)
         {
             $where['is_enable'] = $is_enable;
         }
-        $data = Db::name('GoodsCategory')->where($where)->column('id');
+        $data = Db::name('GoodsCategory')->where($where)->order($order_by)->column('id');
         if(!empty($data))
         {
-            $temp = self::GoodsCategoryItemsIds($data, $is_enable);
+            $temp = self::GoodsCategoryItemsIds($data, $is_enable, $order_by);
             if(!empty($temp))
             {
                 $data = array_merge($data, $temp);
             }
         }
+        $data = empty($data) ? $ids : array_merge($ids, $data);
         return $data;
     }
 
@@ -282,17 +284,27 @@ class GoodsService
             {
                 // 商品处理前钩子
                 $hook_name = 'plugins_service_goods_handle_begin';
-                $ret = Hook::listen($hook_name, [
+                $ret = HookReturnHandle(Hook::listen($hook_name, [
                     'hook_name'     => $hook_name,
                     'is_backend'    => true,
                     'params'        => &$params,
                     'goods'         => &$v,
-                    'goods_id'      => $v['id']
-                ]);
+                    'goods_id'      => isset($v['id']) ? $v['id'] : 0,
+                ]));
                 if(isset($ret['code']) && $ret['code'] != 0)
                 {
                     return $ret;
                 }
+
+                // 商品价格容器
+                $v['price_container'] = [
+                    'price'                 => isset($v['price']) ? $v['price'] : 0.00,
+                    'min_price'             => isset($v['min_price']) ? $v['min_price'] : 0.00,
+                    'max_price'             => isset($v['max_price']) ? $v['max_price'] : 0.00,
+                    'original_price'        => isset($v['original_price']) ? $v['original_price'] : 0.00,
+                    'min_original_price'    => isset($v['min_original_price']) ? $v['min_original_price'] : 0.00,
+                    'max_original_price'    => isset($v['max_original_price']) ? $v['max_original_price'] : 0.00,
+                ];
 
                 // 商品url地址
                 if(!empty($v['id']))
@@ -341,6 +353,12 @@ class GoodsService
                     $v['content_web'] = ResourcesService::ContentStaticReplace($v['content_web'], 'get');
                 }
 
+                // 虚拟商品展示数据
+                if(isset($v['fictitious_goods_value']))
+                {
+                    $v['fictitious_goods_value'] = ResourcesService::ContentStaticReplace($v['fictitious_goods_value'], 'get');
+                }
+
                 // 产地
                 if(isset($v['place_origin']))
                 {
@@ -385,6 +403,12 @@ class GoodsService
                     }
                 }
 
+                // 规格基础
+                if(isset($v['spec_base']))
+                {
+                    $v['spec_base'] = empty($v['spec_base']) ? '' : json_decode($v['spec_base'], true);
+                }
+
                 // 获取规格
                 if($is_spec && !empty($v['id']))
                 {
@@ -401,15 +425,15 @@ class GoodsService
                 $v['show_field_original_price_text'] = '原价';
                 $v['show_field_price_text'] = '销售价';
 
-                // 商品处理前钩子
+                // 商品处理后钩子
                 $hook_name = 'plugins_service_goods_handle_end';
-                $ret = Hook::listen($hook_name, [
+                $ret = HookReturnHandle(Hook::listen($hook_name, [
                     'hook_name'     => $hook_name,
                     'is_backend'    => true,
                     'params'        => &$params,
                     'goods'         => &$v,
-                    'goods_id'      => $v['id']
-                ]);
+                    'goods_id'      => isset($v['id']) ? $v['id'] : 0,
+                ]));
                 if(isset($ret['code']) && $ret['code'] != 0)
                 {
                     return $ret;
@@ -490,7 +514,7 @@ class GoodsService
                     if($temp['code'] == 0)
                     {
                         $temp_spec['is_only_level_one'] = 1;
-                        $temp_spec['inventory'] = $temp['data']['inventory'];
+                        $temp_spec['inventory'] = $temp['data']['spec_base']['inventory'];
                     }
                 }
             }
@@ -953,6 +977,26 @@ class GoodsService
             {
                 $where[] = ['add_time', '<', strtotime($params['time_end'])];
             }
+
+            // 商品分类
+            if(!empty($params['category_id']) && $params['category_id'] > 0)
+            {
+                $category_ids = self::GoodsCategoryItemsIds([intval($params['category_id'])], 1);
+                $goods_ids = Db::name('GoodsCategoryJoin')->where(['category_id'=>$category_ids])->column('goods_id');
+                if(!empty($goods_ids))
+                {
+                    $where[] = ['id', 'in', $goods_ids];
+                } else {
+                    // 避免空条件造成无效的错觉
+                    $where[] = ['id', '=', 0];
+                }
+            }
+
+            // 品牌
+            if(!empty($params['brand_id']) && $params['brand_id'] > 0)
+            {
+                $where[] = ['brand_id', '=', intval($params['brand_id'])];
+            }
         }
         return $where;
     }
@@ -978,9 +1022,9 @@ class GoodsService
             [
                 'checked_type'      => 'length',
                 'key_name'          => 'simple_desc',
-                'checked_data'      => '60',
+                'checked_data'      => '160',
                 'is_checked'        => 1,
-                'error_msg'         => '商品简述格式 最多60个字符',
+                'error_msg'         => '商品简述格式 最多160个字符',
             ],
             [
                 'checked_type'      => 'length',
@@ -1033,7 +1077,14 @@ class GoodsService
             return DataReturn($ret, -1);
         }
 
-        // 规格
+        // 规格基础
+        $specifications_base = self::GetFormGoodsSpecificationsBaseParams($params);
+        if($specifications_base['code'] != 0)
+        {
+            return $specifications_base;
+        }
+
+        // 规格值
         $specifications = self::GetFormGoodsSpecificationsParams($params);
         if($specifications['code'] != 0)
         {
@@ -1064,6 +1115,7 @@ class GoodsService
 
         // 编辑器内容
         $content_web = empty($params['content_web']) ? '' : ResourcesService::ContentStaticReplace(htmlspecialchars_decode($params['content_web']), 'add');
+        $fictitious_goods_value = empty($params['fictitious_goods_value']) ? '' : ResourcesService::ContentStaticReplace(htmlspecialchars_decode($params['fictitious_goods_value']), 'add');
 
         // 基础数据
         $data = [
@@ -1088,7 +1140,25 @@ class GoodsService
             'seo_title'                 => empty($params['seo_title']) ? '' : $params['seo_title'],
             'seo_keywords'              => empty($params['seo_keywords']) ? '' : $params['seo_keywords'],
             'seo_desc'                  => empty($params['seo_desc']) ? '' : $params['seo_desc'],
+            'is_exist_many_spec'        => empty($specifications['data']['title']) ? 0 : 1,
+            'spec_base'                 => empty($specifications_base['data']) ? '' : json_encode($specifications_base['data']),
+            'fictitious_goods_value'       => $fictitious_goods_value,
         ];
+
+        // 商品保存处理钩子
+        $hook_name = 'plugins_service_goods_save_handle';
+        $ret = HookReturnHandle(Hook::listen($hook_name, [
+            'hook_name'     => $hook_name,
+            'is_backend'    => true,
+            'params'        => &$params,
+            'data'          => &$data,
+            'spec'          => $specifications['data'],
+            'goods_id'      => isset($params['id']) ? intval($params['id']) : 0,
+        ]));
+        if(isset($ret['code']) && $ret['code'] != 0)
+        {
+            return $ret;
+        }
 
         // 启动事务
         Db::startTrans();
@@ -1198,7 +1268,7 @@ class GoodsService
     }
 
     /**
-     * 获取规格参数
+     * 获取规格值参数
      * @author   Devil
      * @blog    http://gong.gg/
      * @version 1.0.0
@@ -1213,7 +1283,7 @@ class GoodsService
         $images = [];
 
         // 基础字段数据字段长度
-        $base_count = 6;
+        $base_count = 7;
 
         // 规格值
         foreach($params as $k=>$v)
@@ -1227,7 +1297,12 @@ class GoodsService
                     {
                         foreach($v as $ks=>$vs)
                         {
-                            $data[$ks][] = $vs;
+                            if($keys[1] == 'extends')
+                            {
+                                $data[$ks][] = empty($vs) ? null : htmlspecialchars_decode($vs);
+                            } else {
+                                $data[$ks][] = $vs;
+                            }
                         }
                     }
                 }
@@ -1271,6 +1346,37 @@ class GoodsService
                         return DataReturn('规格值列之间不能重复['.implode(',', array_unique($temp_column)).']', -1);
                     }
                 }
+
+                // 规格值是否重复
+                if(!empty($column_value[0]))
+                {
+                    $temp_row_data = [];
+                    $temp_row_count = count($column_value);
+                    foreach($column_value[0] as $row_key=>$row_value)
+                    {
+                        for($i=0; $i<$temp_row_count; $i++)
+                        {
+                            if(isset($column_value[$i][$row_key]))
+                            {
+                                if(isset($temp_row_data[$row_key]))
+                                {
+                                    $temp_row_data[$row_key] .= $column_value[$i][$row_key];
+                                } else {
+                                    $temp_row_data[$row_key] = $column_value[$i][$row_key];
+                                }
+                            }
+                        }
+                    }
+                    if(!empty($temp_row_data))
+                    {
+                        $unique_all = array_unique($temp_row_data);
+                        $repeat_rows_all = array_diff_assoc($temp_row_data, $unique_all); 
+                        if(!empty($repeat_rows_all))
+                        {
+                            return DataReturn('规格值不能重复['.implode(',', array_unique($repeat_rows_all)).']', -1);
+                        }
+                    }
+                }
                 
                 // 规格名称
                 $names_value = [];
@@ -1302,7 +1408,7 @@ class GoodsService
                 $repeat_names_all = array_diff_assoc($names_value, $unique_all); 
                 if(!empty($repeat_names_all))
                 {
-                    return DataReturn('规格名称列之间不能重复['.implode(',', $repeat_names_all).']', -1);
+                    return DataReturn('规格名称列之间不能重复['.implode(',', array_unique($repeat_names_all)).']', -1);
                 }
             } else {
                 if(empty($data[0][0]) || $data[0][0] <= 0)
@@ -1331,6 +1437,32 @@ class GoodsService
         }
 
         return DataReturn('success', 0, ['data'=>$data, 'title'=>$title, 'images'=>$images]);
+    }
+
+    /**
+     * 获取规格基础参数
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2019-09-23
+     * @desc    description
+     * @param   [array]           $params [输入参数]
+     */
+    private static function GetFormGoodsSpecificationsBaseParams($params = [])
+    {
+        $result = [];
+        foreach($params as $k=>$v)
+        {
+            if(substr($k, 0, 16) == 'spec_base_title_')
+            {
+                $key = substr($k, 16);
+                $result[] = [
+                    'title'     => $v,
+                    'value'     => isset($params['spec_base_value_'.$key]) ? $params['spec_base_value_'.$key] : [],
+                ];
+            }
+        }
+        return DataReturn('success', 0, $result);
     }
 
     /**
@@ -1539,7 +1671,7 @@ class GoodsService
         {
             // 基础字段
             $count = count($data['data'][0]);
-            $temp_key = ['price', 'inventory', 'weight', 'coding', 'barcode', 'original_price'];
+            $temp_key = ['price', 'inventory', 'weight', 'coding', 'barcode', 'original_price', 'extends'];
             $key_count = count($temp_key);
 
             // 等于key总数则只有一列基础规格
@@ -1896,22 +2028,30 @@ class GoodsService
             // 单位 .00 处理
             $base['weight'] = PriceBeautify($base['weight']);
 
-            // 商品处理前钩子
+            // 处理好的数据
+            // 扩展元素标记与html内容数据
+            // extends_element下包含多个元素 ['element'=>'', 'content'=>'']
+            $data = [
+                'spec_base'         => $base,
+                'extends_element'   => [],
+            ];
+
+            // 商品获取规格钩子
             $hook_name = 'plugins_service_goods_spec_base';
-            $ret = Hook::listen($hook_name, [
+            $ret = HookReturnHandle(Hook::listen($hook_name, [
                 'hook_name'     => $hook_name,
                 'is_backend'    => true,
-                'params'        => &$params,
-                'spec_base'     => &$base,
+                'params'        => $params,
+                'data'          => &$data,
                 'goods_id'      => $goods_id
-            ]);
+            ]));
             if(isset($ret['code']) && $ret['code'] != 0)
             {
                 return $ret;
             }
 
             // 返回成功
-            return DataReturn('操作成功', 0, $base);
+            return DataReturn('操作成功', 0, $data);
         }
 
         return DataReturn('没有相关规格', -100);
@@ -1952,9 +2092,9 @@ class GoodsService
         $where = [
             'goods_id'  => intval($params['id']),
         ];
-        $value = [];
 
         // 规格不为数组则为json字符串
+        $value = [];
         if(!is_array($params['spec']))
         {
             $params['spec'] = json_decode(htmlspecialchars_decode($params['spec']), true);
@@ -1974,18 +2114,18 @@ class GoodsService
             if(!empty($temp_data))
             {
                 // 根据基础值id分组
-                $data = [];
+                $group = [];
                 foreach($temp_data as $v)
                 {
-                    $data[$v['goods_spec_base_id']][] = $v;
+                    $group[$v['goods_spec_base_id']][] = $v;
                 }
 
                 // 获取当前操作元素索引
                 $last  = end($params['spec']);
                 $index = count($params['spec'])-1;
                 $spec_str = implode('', array_column($params['spec'], 'value'));
-                $value = [];
-                foreach($data as $v)
+                $spec_type = [];
+                foreach($group as $v)
                 {
                     $temp_str = implode('', array_column($v, 'value'));
                     if(isset($v[$index+1]) && stripos($temp_str, $spec_str) !== false)
@@ -1994,11 +2134,34 @@ class GoodsService
                         $inventory = Db::name('GoodsSpecBase')->where(['id'=>$v[$index+1]['goods_spec_base_id']])->value('inventory');
                         if($inventory > 0)
                         {
-                            $value[$v[$index+1]['value']] = $v[$index+1]['value'];
+                            $spec_type[$v[$index+1]['value']] = $v[$index+1]['value'];
                         }
                     }
                 }
-                return DataReturn('操作成功', 0, array_values($value));
+
+                // 处理好的数据
+                // 扩展元素标记与html内容数据
+                // extends_element下包含多个元素 ['element'=>'', 'content'=>'']
+                $data = [
+                    'spec_type'         => array_values($spec_type),
+                    'extends_element'   => [],
+                ];
+
+                // 商品获取规格类型钩子
+                $hook_name = 'plugins_service_goods_spec_type';
+                $ret = HookReturnHandle(Hook::listen($hook_name, [
+                    'hook_name'     => $hook_name,
+                    'is_backend'    => true,
+                    'params'        => $params,
+                    'data'          => &$data,
+                    'goods_id'      => $goods_id
+                ]));
+                if(isset($ret['code']) && $ret['code'] != 0)
+                {
+                    return $ret;
+                }
+
+                return DataReturn('操作成功', 0, $data);
             }
         }
         return DataReturn('没有相关规格类型', -100);
@@ -2202,6 +2365,46 @@ class GoodsService
             return DataReturn('删除成功', 0);
         }
         return DataReturn('删除失败', -100);
+    }
+
+    /**
+     * 根据商品id获取分类名称
+     * @author   Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2018-08-29
+     * @desc    description
+     * @param   [int]          $goods_id [商品id]
+     */
+    public static function GoodsCategoryNames($goods_id)
+    {
+        $data = Db::name('GoodsCategory')->alias('gc')->join(['__GOODS_CATEGORY_JOIN__'=>'gci'], 'gc.id=gci.category_id')->where(['gci.goods_id'=>$goods_id])->column('gc.name');
+        return DataReturn('获取成功', 0, $data);
+    }
+
+    /**
+     * 商品规格扩展数据
+     * @author   Devil
+     * @blog     http://gong.gg/
+     * @version  1.0.0
+     * @datetime 2019-07-21T16:08:34+0800
+     * @param    [array]          $params [输入参数]
+     */
+    public static function GoodsSpecificationsExtends($params = [])
+    {
+        // 数据
+        $data = [];
+
+        // 规格扩展数据钩子
+        $hook_name = 'plugins_service_goods_spec_extends_handle';
+        Hook::listen($hook_name, [
+            'hook_name'     => $hook_name,
+            'is_backend'    => true,
+            'params'        => $params,
+            'data'          => &$data,
+        ]);
+
+        return DataReturn('获取成功', 0, $data);
     }
 }
 ?>

@@ -32,9 +32,11 @@
             </thead>
             <tbody>
                 {{foreach $cart_list as $goods}}
-                    <tr id="data-list-{{$goods.id}}" data-id="{{$goods.id}}" data-goods-id="{{$goods.goods_id}}" class="{{if $goods['is_shelves'] neq 1}}am-warning{{/if}} {{if $goods['is_delete_time'] neq 0}}am-danger{{/if}}">
+                    <tr id="data-list-{{$goods.id}}" data-id="{{$goods.id}}" data-goods-id="{{$goods.goods_id}}" class="{{if $goods['is_error'] eq 1}}am-danger{{/if}}">
                         <td class="base">
-                            <input type="checkbox" value="{{$goods.id}}" {{if $goods['is_shelves'] neq 1 or $goods['is_delete_time'] neq 0}}disabled{{/if}} />
+                            <label class="am-checkbox-inline am-success am-fl">
+                                <input type="checkbox" value="{{$goods.id}}" {{if $goods['is_error'] eq 1}}disabled{{/if}} data-am-ucheck />
+                            </label>
                             <div class="goods-detail">
                                 <a href="{{$goods.goods_url}}" target="_blank">
                                     <img src="{{$goods.images}}">
@@ -52,17 +54,17 @@
                             </div>
                             <div class="wap-base am-show-sm-only">
                                 {{if $goods['original_price'] gt 0}}
-                                    <span class="original-price">￥{{$goods.original_price}}</span>
+                                    <span class="original-price">{{$price_symbol}}{{$goods.original_price}}</span>
                                 {{/if}}
-                                <strong class="total-price-content">￥{{$goods.price}}</strong>
+                                <strong class="total-price-content">{{$price_symbol}}{{$goods.price}}</strong>
                                 <span class="wap-number">x{{$goods.stock}}</span>
                             </div>
                         </td>
                         <td class="price am-hide-sm-only">
                             {{if $goods['original_price'] gt 0}}
-                                <p class="original-price">￥{{$goods.original_price}}</p>
+                                <p class="original-price">{{$price_symbol}}{{$goods.original_price}}</p>
                             {{/if}}
-                            <p class="line-price">￥{{$goods.price}}</p>
+                            <p class="line-price">{{$price_symbol}}{{$goods.price}}</p>
                         </td>
                         <td class="number">
                             <div class="am-input-group am-input-group-sm stock-tag" data-inventory="{{$goods.inventory}}" data-price="{{$goods.price}}" data-ajax-url="{{:MyUrl('index/cart/Stock')}}">
@@ -70,15 +72,12 @@
                                 <input type="number" class="am-form-field" value="{{$goods.stock}}" {{if $goods['is_shelves'] neq 1 or $goods['is_delete_time'] neq 0}}disabled{{/if}} />
                                 <span class="am-input-group-label {{if $goods['is_shelves'] eq 1 and $goods['is_delete_time'] eq 0}}stock-submit{{/if}}" data-type="add">+</span>
                             </div>
-                            {{if $goods['is_shelves'] neq 1}}
-                                <p>商品已下架</p>
-                            {{/if}}
-                            {{if $goods['is_delete_time'] neq 0}}
-                                <p>商品已作废</p>
+                            {{if $goods['is_error'] eq 1 and !empty($goods['error_msg'])}}
+                                <p class="am-text-danger">{{$goods.error_msg}}</p>
                             {{/if}}
                         </td>
                         <td class="total-price am-hide-sm-only">
-                            <strong class="total-price-content">￥{{$goods.total_price}}</strong>
+                            <strong class="total-price-content">{{$price_symbol}}{{$goods.total_price}}</strong>
                         </td>
                         <td class="operation">
                             <a href="javascript:;" class="submit-delete" data-url="{{:MyUrl('index/cart/delete')}}" data-id="{{$goods.id}}" data-view="fun" data-value="ViewDeleteBack">删除</a>
@@ -90,18 +89,18 @@
 
         <!-- 导航 -->
         <div class="cart-nav">
-            <div class="am-fl nav-left">
-                <label>
-                    <input type="checkbox" value="3" class="select-all-event" />
-                    <span>全选</span>
+            <div class="am-fl nav-left am-margin-left-xs">
+                <label class="am-checkbox-inline am-success select-all-event">
+                    <input type="checkbox" value="1" data-am-ucheck />
+                    <span class="el-text">全选</span>
                 </label>
-                <a href="javascript:;" class="submit-ajax" data-url="{{:MyUrl('index/cart/delete')}}" data-id="{{$base.ids}}" data-view="reload" data-msg="清空后不可恢复、确认操作吗？">清空</a>
+                <a href="javascript:;" class="am-margin-left-sm submit-ajax" data-url="{{:MyUrl('index/cart/delete')}}" data-id="{{$base.ids}}" data-view="reload" data-msg="清空后不可恢复、确认操作吗？">清空</a>
             </div>
             <div class="am-fr nav-right">
                 <form action="{{:MyUrl('index/buy/index')}}" method="post">
                     <span class="selected-tips am-fl">已选商品 <strong>0</strong> 件</span>
                     <span class="total-price-tips am-fl">合计：</span>
-                    <strong class="nav-total-price am-fl">￥0.00</strong>
+                    <strong class="nav-total-price am-fl">{{$price_symbol}}0.00</strong>
                     <input type="hidden" name="ids" value="0" />
                     <input type="hidden" name="buy_type" value="cart" />
                     <button type="submit" class="am-btn am-btn-primary separate-submit">结算</button>

@@ -12,6 +12,7 @@ namespace app\admin\controller;
 
 use app\service\ThemeService;
 use app\service\ConfigService;
+use app\service\StoreService;
 
 /**
  * 主题管理
@@ -41,7 +42,7 @@ class Theme extends Common
 		$this->IsPower();
 
 		// 小导航
-		$this->view_type = input('view_type', 'home');
+		$this->view_type = input('view_type', 'index');
 	}
 
 	/**
@@ -56,7 +57,10 @@ class Theme extends Common
 		// 导航参数
 		$this->assign('view_type', $this->view_type);
 
-		if($this->view_type == 'home')
+        // 应用商店
+        $this->assign('store_theme_url', StoreService::StoreThemeUrl());
+
+		if($this->view_type == 'index')
 		{
 			// 模板列表
 			$this->assign('data_list', ThemeService::ThemeList());
@@ -64,10 +68,8 @@ class Theme extends Common
 			// 默认主题
 			$theme = MyC('common_default_theme', 'default', true);
 			$this->assign('theme', empty($theme) ? 'default' : $theme);
-			return $this->fetch('index');
-		} else {
-			return $this->fetch('upload');
 		}
+        return $this->fetch($this->view_type);
 	}
 
 	/**

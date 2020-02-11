@@ -24,6 +24,9 @@ return array(
             '1.3.0' => array('value' => '1.3.0', 'name' => 'v1.3.0'),
             '1.4.0' => array('value' => '1.4.0', 'name' => 'v1.4.0'),
             '1.5.0' => array('value' => '1.5.0', 'name' => 'v1.5.0'),
+            '1.6.0' => array('value' => '1.6.0', 'name' => 'v1.6.0'),
+            '1.7.0' => array('value' => '1.7.0', 'name' => 'v1.7.0'),
+            '1.8.0' => array('value' => '1.8.0', 'name' => 'v1.8.0'),
         ),
 
     // 用户注册类型列表
@@ -97,7 +100,7 @@ return array(
     'common_order_admin_status'         =>  array(
             0 => array('id' => 0, 'name' => '待确认', 'checked' => true),
             1 => array('id' => 1, 'name' => '已确认/待支付'),
-            2 => array('id' => 2, 'name' => '已支付/待发货'),
+            2 => array('id' => 2, 'name' => '已支付/待发货/待取货'),
             3 => array('id' => 3, 'name' => '已发货/待收货'),
             4 => array('id' => 4, 'name' => '已完成'),
             5 => array('id' => 5, 'name' => '已取消'),
@@ -126,6 +129,8 @@ return array(
             'alipay' => array('value' => 'alipay', 'name' => '支付宝小程序'),
             'weixin' => array('value' => 'weixin', 'name' => '微信小程序'),
             'baidu' => array('value' => 'baidu', 'name' => '百度小程序'),
+            'toutiao' => array('value' => 'toutiao', 'name' => '头条小程序'),
+            'qq' => array('value' => 'qq', 'name' => 'QQ小程序'),
         ),
 
     // 小程序url跳转类型
@@ -334,6 +339,15 @@ return array(
             'order' => '订单',
         ),
 
+    // 站点类型
+    'common_site_type_list' =>  array(
+            0 => array('value' => 0, 'name' => '销售'),
+            1 => array('value' => 1, 'name' => '展示'),
+            2 => array('value' => 2, 'name' => '自提'),
+            3 => array('value' => 3, 'name' => '虚拟销售'),
+            4 => array('value' => 4, 'name' => '销售+自提'),
+        ),
+
 
     // 色彩值
     'common_color_list'                 =>  array(
@@ -365,7 +379,7 @@ return array(
     'common_regex_pwd'                  =>  '^.{6,18}$',
 
     // 手机号码
-    'common_regex_mobile'               =>  '^1((3|5|8|7){1}\d{1})\d{8}$',
+    'common_regex_mobile'               =>  '^1((3|4|5|6|7|8|9){1}\d{1})\d{8}$',
 
     // 座机号码
     'common_regex_tel'                  =>  '^\d{3,4}-?\d{8}$',

@@ -11,6 +11,7 @@
 namespace app\index\controller;
 
 use app\service\OrderAftersaleService;
+use app\service\SeoService;
 
 /**
  * 订单售后
@@ -86,6 +87,9 @@ class Orderaftersale extends Common
         $this->assign('common_order_aftersale_status_list', lang('common_order_aftersale_status_list'));
         $this->assign('common_order_aftersale_refundment_list', lang('common_order_aftersale_refundment_list'));
 
+        // 浏览器名称
+        $this->assign('home_seo_site_title', SeoService::BrowserSeoTitle('订单售后', 1));
+
         // 参数
         $this->assign('params', $params);
         return $this->fetch();
@@ -129,7 +133,17 @@ class Orderaftersale extends Common
                 ],
             ];
             $new_aftersale = OrderAftersaleService::OrderAftersaleList($data_params);
-            $this->assign('new_aftersale_data', empty($new_aftersale['data'][0]) ? [] : $new_aftersale['data'][0]);
+            if(!empty($new_aftersale['data'][0]))
+            {
+                $new_aftersale_data = $new_aftersale['data'][0];
+                $new_aftersale_data['tips_msg'] = OrderAftersaleService::OrderAftersaleTipsMsg($new_aftersale_data);
+            } else {
+                $new_aftersale_data = [];
+            }
+            $this->assign('new_aftersale_data', $new_aftersale_data);
+
+            // 进度
+            $this->assign('step_data', OrderAftersaleService::OrderAftersaleStep($new_aftersale_data));
 
             // 可退款退货
             $returned = OrderAftersaleService::OrderAftersaleCalculation($order_id, $order_detail_id);
@@ -139,7 +153,7 @@ class Orderaftersale extends Common
             $this->assign('common_order_aftersale_type_list', lang('common_order_aftersale_type_list'));
 
             // 编辑器文件存放地址
-            $this->assign('editor_path_type', 'aftersale_'.$this->user['id'].'_'.$order_id.'_'.$order_detail_id);
+            $this->assign('editor_path_type', 'order_aftersale-'.$this->user['id'].'-'.$order_id.'-'.$order_detail_id);
 
             $this->assign('params', $params);
             return $this->fetch();

@@ -129,6 +129,12 @@ class Goods extends Common
             $like_goods = GoodsService::GoodsList($params);
             $this->assign('detail_like_goods', $like_goods['data']);
 
+            // 站点类型 - 展示型模式操作名称
+            $this->assign('common_is_exhibition_mode_btn_text', MyC('common_is_exhibition_mode_btn_text', '立即咨询', true));
+
+            // 是否商品详情页展示相册
+            $this->assign('common_is_goods_detail_show_photo', MyC('common_is_goods_detail_show_photo', 0, true));
+
             return $this->fetch();
         }
     }
@@ -146,81 +152,110 @@ class Goods extends Common
     private function PluginsHook($goods_id, &$goods)
     {
         // 商品页面相册内部钩子
-        $this->assign('plugins_view_goods_detail_photo_within_data', Hook::listen('plugins_view_goods_detail_photo_within',
+        $hook_name = 'plugins_view_goods_detail_photo_within';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_photo_within',
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
             ]));
 
         // 商品页面相册底部钩子
-        $this->assign('plugins_view_goods_detail_photo_bottom_data', Hook::listen('plugins_view_goods_detail_photo_bottom',
+        $hook_name = 'plugins_view_goods_detail_photo_bottom';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_photo_bottom',
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
             ]));
         
         // 商品页面基础信息顶部钩子
-        $this->assign('plugins_view_goods_detail_base_top_data', Hook::listen('plugins_view_goods_detail_base_top',
+        $hook_name = 'plugins_view_goods_detail_base_top';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_base_top',
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
             ]));
 
         // 商品页面基础信息面板底部钩子
-        $this->assign('plugins_view_goods_detail_panel_bottom_data', Hook::listen('plugins_view_goods_detail_panel_bottom',
+        $hook_name = 'plugins_view_goods_detail_panel_bottom';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_panel_bottom',
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
             ]));
 
         // 商品页面基础信息面板底部钩子
-        $this->assign('plugins_view_goods_detail_base_bottom_data', Hook::listen('plugins_view_goods_detail_base_bottom',
+        $hook_name = 'plugins_view_goods_detail_base_bottom';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_base_bottom',
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
             ]));
 
         // 商品页面tabs顶部钩子
-        $this->assign('plugins_view_goods_detail_tabs_top_data', Hook::listen('plugins_view_goods_detail_tabs_top',
+        $hook_name = 'plugins_view_goods_detail_tabs_top';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_tabs_top',
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
             ]));
 
         // 商品页面tabs顶部钩子
-        $this->assign('plugins_view_goods_detail_tabs_bottom_data', Hook::listen('plugins_view_goods_detail_tabs_bottom',
+        $hook_name = 'plugins_view_goods_detail_tabs_bottom';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_tabs_bottom',
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
             ]));
 
         // 商品页面左侧顶部钩子
-        $this->assign('plugins_view_goods_detail_left_top_data', Hook::listen('plugins_view_goods_detail_left_top',
+        $hook_name = 'plugins_view_goods_detail_left_top';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_left_top',
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
             ]));
 
         // 商品页面基础信息标题里面钩子
-        $this->assign('plugins_view_goods_detail_title_data', Hook::listen('plugins_view_goods_detail_title',
+        $hook_name = 'plugins_view_goods_detail_title';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
             [
-                'hook_name'    => 'plugins_view_goods_detail_title',
+                'hook_name'    => $hook_name,
+                'is_backend'   => false,
+                'goods_id'     => $goods_id,
+                'goods'        => &$goods,
+            ]));
+
+        // 商品页面基础信息面板售价顶部钩子
+        $hook_name = 'plugins_view_goods_detail_panel_price_top';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
+            [
+                'hook_name'    => $hook_name,
+                'is_backend'   => false,
+                'goods_id'     => $goods_id,
+                'goods'        => &$goods,
+            ]));
+
+        // 商品页面基础信息购买小导航里面钩子
+        $hook_name = 'plugins_view_goods_detail_base_buy_nav_min_inside';
+        $this->assign($hook_name.'_data', Hook::listen($hook_name,
+            [
+                'hook_name'    => $hook_name,
                 'is_backend'   => false,
                 'goods_id'     => $goods_id,
                 'goods'        => &$goods,
@@ -237,6 +272,12 @@ class Goods extends Common
      */
     public function Favor()
     {
+        // 是否ajax请求
+        if(!IS_AJAX)
+        {
+            return $this->error('非法访问');
+        }
+        
         // 是否登录
         $this->IsLogin();
 
@@ -256,6 +297,12 @@ class Goods extends Common
      */
     public function SpecType()
     {
+        // 是否ajax请求
+        if(!IS_AJAX)
+        {
+            return $this->error('非法访问');
+        }
+
         // 开始处理
         $params = input('post.');
         return GoodsService::GoodsSpecType($params);
@@ -271,6 +318,12 @@ class Goods extends Common
      */
     public function SpecDetail()
     {
+        // 是否ajax请求
+        if(!IS_AJAX)
+        {
+            return $this->error('非法访问');
+        }
+
         // 开始处理
         $params = input('post.');
         return GoodsService::GoodsSpecDetail($params);
@@ -283,10 +336,20 @@ class Goods extends Common
      * @version  1.0.0
      * @datetime 2019-05-13T21:47:41+0800
      */
-    public function Comment()
+    public function Comments()
     {
+        // 是否ajax请求
+        if(!IS_AJAX)
+        {
+            return $this->error('非法访问');
+        }
+
         // 参数
         $params = input();
+        if(empty($params['goods_id']))
+        {
+            return DataReturn('参数有误', -1);
+        }
 
         // 分页
         $number = 10;
@@ -311,14 +374,15 @@ class Goods extends Common
             'is_public' => 1,
         );
         $data = GoodsCommentsService::GoodsCommentsList($data_params);
-        
+
         // 返回数据
         $result = [
             'number'            => $number,
             'total'             => $total,
             'page_total'        => $page_total,
-            'data'              => $data['data'],
+            'data'              => $this->fetch(null, ['data'=>$data['data']]),
         ];
         return DataReturn('请求成功', 0, $result);
     }
 }
+?>

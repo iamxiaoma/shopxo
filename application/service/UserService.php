@@ -35,13 +35,54 @@ class UserService
      */
     public static function LoginUserInfo()
     {
+        // 参数
+        $params = input();
+
+        // 用户数据处理
+        $user = null;
         if(APPLICATION == 'web')
         {
-            return session('user');
+            // web用户session
+            $user = session('user');
+
+            // token仅小程序浏览器环境和api接口环境中有效
+            if(empty($user) && !empty($params['token']) && in_array(MiniAppEnv(), config('shopxo.mini_app_type_list')))
+            {
+                $user = self::UserTokenData($params['token']);
+                if($user !== null && isset($user['id']))
+                {
+                    self::UserLoginRecord($user['id']);
+                }
+            }
         } else {
-            $params = input();
-            return empty($params['user_id']) ? null : self::UserLoginRecord($params['user_id'], true);
+            if(!empty($params['token']))
+            {
+                $user = self::UserTokenData($params['token']);
+            }
         }
+
+        return $user;
+    }
+
+    /**
+     * 获取用户token用户数据
+     * @author   Devil
+     * @blog     http://gong.gg/
+     * @version  1.0.0
+     * @datetime 2019-08-18T19:01:59+0800
+     * @desc     description
+     * @param    [string]                   $token [用户token]
+     */
+    private static function UserTokenData($token)
+    {
+        $user = cache(config('shopxo.cache_user_info').$token);
+        if($user !== null && isset($user['id']))
+        {
+            return $user;
+        }
+
+        // 数据库校验
+        return self::AppUserInfoHandle(null, 'token', $token);
     }
 
     /**
@@ -92,7 +133,7 @@ class UserService
         $m = isset($params['m']) ? intval($params['m']) : 0;
         $n = isset($params['n']) ? intval($params['n']) : 10;
 
-        // 获取管理员列表
+        // 获取用户列表
         $data = Db::name('User')->where($where)->order($order_by)->limit($m, $n)->select();
         if(!empty($data))
         {
@@ -118,7 +159,7 @@ class UserService
                 $v['upd_time'] = date('Y-m-d H:i:s', $v['upd_time']);
 
                 // 性别
-                $v['gender_text'] = $common_gender_list[$v['gender']]['name'];
+                $v['gender_text'] = isset($common_gender_list[$v['gender']]) ? $common_gender_list[$v['gender']]['name'] : '未知';
 
                 // 状态
                 $v['status_text'] = $common_user_status_list[$v['status']]['name'];
@@ -273,11 +314,30 @@ class UserService
             'integral'              => intval($params['integral']),
             'status'                => intval($params['status']),
             'alipay_openid'         => isset($params['alipay_openid']) ? $params['alipay_openid'] :  '',
-            'weixin_openid'         => isset($params['weixin_openid']) ? $params['weixin_openid'] :  '',
             'baidu_openid'          => isset($params['baidu_openid']) ? $params['baidu_openid'] :  '',
+            'toutiao_openid'        => isset($params['toutiao_openid']) ? $params['toutiao_openid'] :  '',
+            'qq_openid'             => isset($params['qq_openid']) ? $params['qq_openid'] :  '',
+            'qq_unionid'            => isset($params['qq_unionid']) ? $params['qq_unionid'] :  '',
+            'weixin_openid'         => isset($params['weixin_openid']) ? $params['weixin_openid'] :  '',
+            'weixin_unionid'        => isset($params['weixin_unionid']) ? $params['weixin_unionid'] :  '',
+            'weixin_web_openid'     => isset($params['weixin_web_openid']) ? $params['weixin_web_openid'] :  '',
             'birthday'              => empty($params['birthday']) ? 0 : strtotime($params['birthday']),
             'upd_time'              => time(),
         ];
+
+        // 用户保存处理钩子
+        $hook_name = 'plugins_service_user_save_handle';
+        $ret = HookReturnHandle(Hook::listen($hook_name, [
+            'hook_name'     => $hook_name,
+            'is_backend'    => true,
+            'params'        => &$params,
+            'data'          => &$data,
+            'user_id'       => isset($params['id']) ? intval($params['id']) : 0,
+        ]));
+        if(isset($ret['code']) && $ret['code'] != 0)
+        {
+            return $ret;
+        }
 
         // 密码
         if(!empty($params['pwd']))
@@ -394,6 +454,22 @@ class UserService
             $is_default = false;
             foreach($data as &$v)
             {
+                // 坐标处理
+                if(in_array(APPLICATION_CLIENT_TYPE, config('shopxo.coordinate_transformation')))
+                {
+                    // 坐标转换 百度转火星(高德，谷歌，腾讯坐标)
+                    if(isset($v['lng']) && isset($v['lat']) && $v['lng'] > 0 && $v['lat'] > 0)
+                    {
+                        $map = \base\GeoTransUtil::BdToGcj($v['lng'], $v['lat']);
+                        if(isset($map['lng']) && isset($map['lat']))
+                        {
+                            $v['lng'] = $map['lng'];
+                            $v['lat'] = $map['lat'];
+                        }
+                    }
+                }
+
+                // 地区
                 $v['province_name'] = RegionService::RegionName($v['province']);
                 $v['city_name'] = RegionService::RegionName($v['city']);
                 $v['county_name'] = RegionService::RegionName($v['county']);
@@ -723,50 +799,21 @@ class UserService
             $user = Db::name('User')->field('*')->find($user_id);
             if(!empty($user))
             {
-                // 基础数据处理
-                $user['add_time_text']  =   date('Y-m-d H:i:s', $user['add_time']);
-                $user['upd_time_text']  =   date('Y-m-d H:i:s', $user['upd_time']);
-                $user['gender_text']    =   lang('common_gender_list')[$user['gender']]['name'];
-                $user['birthday_text']  =   empty($user['birthday']) ? '' : date('Y-m-d', $user['birthday']);
-                $user['mobile_security']=   empty($user['mobile']) ? '' : substr($user['mobile'], 0, 3).'***'.substr($user['mobile'], -3);
-                $user['email_security'] =   empty($user['email']) ? '' : substr($user['email'], 0, 3).'***'.substr($user['email'], -3);
-
-                // 显示名称,根据规则优先展示
-                $user['user_name_view'] = $user['username'];
-                if(empty($user['user_name_view']))
-                {
-                    $user['user_name_view'] = $user['nickname'];
-                }
-                if(empty($user['user_name_view']))
-                {
-                    $user['user_name_view'] = $user['mobile_security'];
-                }
-                if(empty($user['user_name_view']))
-                {
-                    $user['user_name_view'] = $user['email_security'];
-                }
-
-                // 头像
-                if(!empty($user['avatar']))
-                {
-                    $user['avatar'] = ResourcesService::AttachmentPathViewHandle($user['avatar']);
-                } else {
-                    $user['avatar'] = config('shopxo.attachment_host').'/static/index/'.strtolower(config('DEFAULT_THEME', 'default')).'/images/default-user-avatar.jpg';
-                }
+                // 用户数据处理
+                $user = self::UserHandle($user);
 
                 // 用户登录成功信息纪录钩子
                 $hook_name = 'plugins_service_user_login_success_record';
-                $ret = Hook::listen($hook_name, [
+                Hook::listen($hook_name, [
                     'hook_name'     => $hook_name,
                     'is_backend'    => true,
                     'user'          => &$user,
                     'user_id'       => $user_id
                 ]);
 
-                if($is_app == true)
+                // 非app则存储session
+                if($is_app == false)
                 {
-                    return $user;
-                } else {
                     // 存储session
                     session('user', $user);
                     return (session('user') !== null);
@@ -774,6 +821,71 @@ class UserService
             }
         }
         return false;
+    }
+
+    /**
+     * 用户数据处理
+     * @author  Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2020-01-23
+     * @desc    description
+     * @param   [ array]          $user [用户数据]
+     */
+    private static function UserHandle($user)
+    {
+        // 基础数据处理
+        if(isset($user['add_time']))
+        {
+            $user['add_time_text']  =   date('Y-m-d H:i:s', $user['add_time']);
+        }
+        if(isset($user['upd_time']))
+        {
+            $user['upd_time_text']  =   date('Y-m-d H:i:s', $user['upd_time']);
+        }
+        if(isset($user['gender']))
+        {
+            $user['gender_text']    =   lang('common_gender_list')[$user['gender']]['name'];
+        }
+        if(isset($user['birthday']))
+        {
+            $user['birthday_text']  =   empty($user['birthday']) ? '' : date('Y-m-d', $user['birthday']);
+        }
+
+        // 邮箱/手机
+        if(isset($user['mobile']))
+        {
+            $user['mobile_security']=   empty($user['mobile']) ? '' : substr($user['mobile'], 0, 3).'***'.substr($user['mobile'], -3);
+        }
+        if(isset($user['email']))
+        {
+            $user['email_security'] =   empty($user['email']) ? '' : substr($user['email'], 0, 3).'***'.substr($user['email'], -3);
+        }
+
+        // 显示名称,根据规则优先展示
+        $user['user_name_view'] = isset($user['username']) ? $user['username'] : '';
+        if(empty($user['user_name_view']) && isset($user['nickname']))
+        {
+            $user['user_name_view'] = $user['nickname'];
+        }
+        if(empty($user['user_name_view']) && isset($user['mobile_security']))
+        {
+            $user['user_name_view'] = $user['mobile_security'];
+        }
+        if(empty($user['user_name_view']) && isset($user['email_security']))
+        {
+            $user['user_name_view'] = $user['email_security'];
+        }
+
+        // 头像
+        if(!empty($user['avatar']))
+        {
+            $user['avatar'] = ResourcesService::AttachmentPathViewHandle($user['avatar']);
+        } else {
+            $user['avatar'] = config('shopxo.attachment_host').'/static/index/'.strtolower(config('DEFAULT_THEME', 'default')).'/images/default-user-avatar.jpg';
+        }
+
+        return $user;
     }
 
     /**
@@ -860,7 +972,10 @@ class UserService
         ];
         if(Db::name('User')->where(['id'=>$params['user']['id']])->update($data))
         {
-            self::UserLoginRecord($params['user']['id']);
+            if(APPLICATION == 'web')
+            {
+                self::UserLoginRecord($params['user']['id']);
+            }
             return DataReturn('上传成功', 0);
         }
         return DataReturn('上传失败', -100);
@@ -929,12 +1044,12 @@ class UserService
 
         // 用户登录前钩子
         $hook_name = 'plugins_service_user_login_begin';
-        $ret = Hook::listen($hook_name, [
+        $ret = HookReturnHandle(Hook::listen($hook_name, [
             'hook_name'     => $hook_name,
             'is_backend'    => true,
             'params'        => &$params,
             'user_id'       => $user['id']
-        ]);
+        ]));
         if(isset($ret['code']) && $ret['code'] != 0)
         {
             return $ret;
@@ -974,14 +1089,14 @@ class UserService
 
             // 用户登录后钩子
             $hook_name = 'plugins_service_user_login_end';
-            $ret = Hook::listen($hook_name, [
+            $ret = HookReturnHandle(Hook::listen($hook_name, [
                 'hook_name'     => $hook_name,
                 'is_backend'    => true,
                 'params'        => &$params,
                 'user_id'       => $user_id,
                 'user'          => Db::name('User')->field('id,username,nickname,mobile,email,gender,avatar,province,city,birthday')->where(['id'=>$user_id])->find(),
                 'body_html'     => &$body_html,
-            ]);
+            ]));
             if(isset($ret['code']) && $ret['code'] != 0)
             {
                 return $ret;
@@ -1093,7 +1208,6 @@ class UserService
         // 用户数据
         $salt = GetNumberCode(6);
         $data = [
-            'add_time'      => time(),
             'upd_time'      => time(),
             'salt'          => $salt,
             'pwd'           => LoginPwdEncryption($params['pwd'], $salt),
@@ -1297,7 +1411,7 @@ class UserService
         }
 
         // 发送验证码
-        $code = GetNumberCode(6);
+        $code = GetNumberCode(4);
         if($params['type'] == 'sms')
         {
             $obj = new \base\Sms($verify_params);
@@ -1368,7 +1482,7 @@ class UserService
         }
 
         // 验证码
-        $code = GetNumberCode(6);
+        $code = GetNumberCode(4);
 
         // 手机
         if($ret['data'] == 'mobile')
@@ -1587,23 +1701,124 @@ class UserService
      */
     public static function AuthUserProgram($params, $field)
     {
+        // 用户信息
         $data = [
             $field              => $params['openid'],
             'nickname'          => empty($params['nick_name']) ? '' : $params['nick_name'],
             'avatar'            => empty($params['avatar']) ? '' : $params['avatar'],
-            'gender'            => empty($params['gender']) ? 0 : ($params['gender'] == 'm') ? 2 : 1,
+            'gender'            => empty($params['gender']) ? 0 : intval($params['gender']),
             'province'          => empty($params['province']) ? '' : $params['province'],
             'city'              => empty($params['city']) ? '' : $params['city'],
-            'referrer'          => isset($params['referrer']) ? intval($params['referrer']) : 0,
+            'referrer'          => isset($params['referrer']) ? $params['referrer'] : 0,
         ];
-        $user = self::UserInfo($field, $params['openid']);
+
+        // 用户信息处理
+        $user = self::AppUserInfoHandle(null, $field, $params['openid']);
         if(!empty($user))
         {
-            $data = $user;
+            return DataReturn('授权成功', 0, $user);
+        } else {
+            // 用户unionid列表
+            // 微信用户unionid
+            // QQ用户unionid
+            $unionid_all = ['weixin_unionid', 'qq_unionid'];
+            foreach($unionid_all as $unionid)
+            {
+                if(!empty($params[$unionid]))
+                {
+                    // unionid字段是否存在用户
+                    $user_unionid = UserService::AppUserInfoHandle(null, $unionid, $params[$unionid]);
+                    if(!empty($user_unionid))
+                    {
+                        // openid绑定
+                        if(Db::name('User')->where(['id'=>$user_unionid['id']])->update([$field=>$params['openid'], 'upd_time'=>time()]))
+                        {
+                            // 直接返回用户信息
+                            $user_unionid[$field] = $params['openid'];
+                            return DataReturn('授权成功', 0, $user_unionid);
+                        }
+                    }
+
+                    // 如果用户不存在数据库中，则unionid放入用户data中
+                    $data[$unionid] = $params[$unionid];
+                    break;
+                }
+            }
+
+            // 不强制绑定手机则写入用户信息
+            if(intval(MyC('common_user_is_mandatory_bind_mobile')) != 1)
+            {
+                $ret = self::UserInsert($data, $params);
+                if($ret['code'] == 0)
+                {
+                    return DataReturn('授权成功', 0, self::AppUserInfoHandle($ret['data']['user_id']));
+                } else {
+                    return $ret;
+                }
+            }
+        }
+        return DataReturn('授权成功', 0, self::AppUserInfoHandle(null, null, null, $data));
+    }
+
+    /**
+     * app用户信息
+     * @author   Devil
+     * @blog    http://gong.gg/
+     * @version 1.0.0
+     * @date    2018-11-06
+     * @desc    description
+     * @param   [int]             $user_id          [指定用户id]
+     * @param   [string]          $where_field      [字段名称]
+     * @param   [string]          $where_value      [字段值]
+     * @param   [array]           $user             [用户信息]
+     */
+    public static function AppUserInfoHandle($user_id = null, $where_field = null, $where_value = null, $user = [])
+    {
+        // 获取用户信息
+        $field = 'id,username,nickname,mobile,email,avatar,alipay_openid,weixin_openid,weixin_unionid,weixin_web_openid,baidu_openid,toutiao_openid,qq_openid,qq_unionid,integral,locking_integral,referrer,add_time';
+        if(!empty($user_id))
+        {
+            $user = self::UserInfo('id', $user_id, $field);
+        } elseif(!empty($where_field) && !empty($where_value) && empty($user))
+        {
+            $user = self::UserInfo($where_field, $where_value, $field);
         }
 
-        // 返回成功
-        return DataReturn('授权成功', 0, $data);
+        if(!empty($user))
+        {
+            // 用户信息处理
+            $user = self::GetUserViewInfo(0, $user);
+
+            // 是否强制绑定手机号码
+            $user['is_mandatory_bind_mobile'] = intval(MyC('common_user_is_mandatory_bind_mobile'));
+
+            // 基础处理
+            if(isset($user['id']))
+            {
+                // token生成并存储缓存
+                if($user['is_mandatory_bind_mobile'] == 0 || ($user['is_mandatory_bind_mobile'] == 1 && !empty($user['mobile'])))
+                {
+                    $user['token'] = md5(md5($user['id'].time()).rand(100, 1000000));
+                    cache(config('shopxo.cache_user_info').$user['token'], $user);
+
+                    // 非token数据库校验，则重新生成token更新到数据库
+                    if($where_field != 'token')
+                    {
+                        Db::name('User')->where(['id'=>$user['id']])->update(['token'=>$user['token'], 'upd_time'=>time()]);
+                    }
+                } else {
+                    $user['token'] = '';
+                }
+
+                // 用户登录纪录处理
+                if(in_array(APPLICATION_CLIENT_TYPE, ['pc', 'h5']))
+                {
+                    self::UserLoginRecord($user['id'], true);
+                }
+            }
+        }
+
+        return $user;
     }
 
     /**
@@ -1613,17 +1828,18 @@ class UserService
      * @version 1.0.0
      * @date    2019-01-25
      * @desc    description
-     * @param   [string]          $field [字段名称]
-     * @param   [string]          $value [字段值]
+     * @param   [string]          $where_field      [字段名称]
+     * @param   [string]          $where_value      [字段值]
+     * @param   [string]          $field            [指定字段]
      */
-    public static function UserInfo($field, $value)
+    public static function UserInfo($where_field, $where_value, $field = '*')
     {
-        if(empty($field) || empty($value))
+        if(empty($where_field) || empty($where_value))
         {
             return '';
         }
         
-        return Db::name('User')->where([$field=>$value, 'is_delete_time'=>0])->find();
+        return Db::name('User')->where([$where_field=>$where_value, 'is_delete_time'=>0])->field($field)->find();
     }
 
     /**
@@ -1658,6 +1874,7 @@ class UserService
         $data['referrer'] = self::UserReferrerDecrypt($params);
 
         // 添加用户
+        $data['add_time'] = time();
         $user_id = Db::name('User')->insertGetId($data);
         if($user_id > 0)
         {
@@ -1672,14 +1889,14 @@ class UserService
 
             // 注册成功后钩子
             $hook_name = 'plugins_service_user_register_end';
-            $ret = Hook::listen($hook_name, [
+            $ret = HookReturnHandle(Hook::listen($hook_name, [
                 'hook_name'     => $hook_name,
                 'is_backend'    => true,
                 'params'        => &$params,
                 'user_id'       => $user_id,
                 'user'          => Db::name('User')->field('id,username,nickname,mobile,email,gender,avatar,province,city,birthday')->where(['id'=>$user_id])->find(),
                 'body_html'     => &$body_html,
-            ]);
+            ]));
             if(isset($ret['code']) && $ret['code'] != 0)
             {
                 return $ret;
@@ -1773,8 +1990,25 @@ class UserService
         );
 
         // 获取用户信息
-        $where = ['mobile'=>$data['mobile'], 'is_delete_time'=>0];
-        $temp_user = Db::name('User')->where($where)->find();
+        $temp_user = Db::name('User')->where([
+            ['mobile', '=', $data['mobile']],
+            ['is_delete_time', '=', 0],
+        ])->find();
+        $open_user = Db::name('User')->where([
+            [$accounts_field, '=', $params[$accounts_field]],
+            ['is_delete_time', '=', 0],
+        ])->find();
+
+        // 如果手机号码存在，并且openid也已存在，则更新掉之前的openid
+        if(!empty($temp_user))
+        {
+            if(!empty($open_user))
+            {
+                Db::name('User')->where(['id'=>$open_user['id']])->update([$accounts_field=>'', 'upd_time'=>time()]);
+            }
+        } else {
+            $temp_user = $open_user;
+        }
 
         // 额外信息
         if(empty($temp_user['nickname']) && !empty($params['nickname']))
@@ -1801,7 +2035,6 @@ class UserService
         // 不存在添加/则更新
         if(empty($temp_user))
         {
-            $data['add_time'] = time();
             $user_ret = self::UserInsert($data, $params);
             if($user_ret['code'] == 0)
             {
@@ -1811,7 +2044,7 @@ class UserService
             }
         } else {
             $data['upd_time'] = time();
-            if(Db::name('User')->where($where)->update($data))
+            if(Db::name('User')->where(['id'=>$temp_user['id']])->update($data))
             {
                 $user_id = $temp_user['id'];
             }
@@ -1821,8 +2054,7 @@ class UserService
         {
             // 清除验证码
             $obj->Remove();
-
-            return DataReturn('绑定成功', 0, self::UserLoginRecord($user_id, true));
+            return DataReturn('绑定成功', 0, self::AppUserInfoHandle($user_id));
         } else {
             return DataReturn('绑定失败', -100);
         }
@@ -1868,7 +2100,7 @@ class UserService
 
         // 发送验证码
         $obj = new \base\Sms($verify_params);
-        $code = GetNumberCode(6);
+        $code = GetNumberCode(4);
         $status = $obj->SendCode($params['mobile'], $code, MyC('home_sms_user_mobile_binding'));
         
         // 状态
@@ -1901,7 +2133,7 @@ class UserService
 
         // 用户退出钩子
         $hook_name = 'plugins_service_user_logout_handle';
-        $ret = Hook::listen($hook_name, [
+        Hook::listen($hook_name, [
             'hook_name'     => $hook_name,
             'is_backend'    => true,
             'params'        => [],
@@ -1937,37 +2169,8 @@ class UserService
             $user = Db::name('User')->field('username,nickname,mobile,email,avatar')->find($user_id);
         }
         
-        // 开始处理用户信息
-        if(!empty($user))
-        {
-            $user['user_name_view'] = $user['username'];
-            if(empty($user['user_name_view']))
-            {
-                $user['user_name_view'] = $user['nickname'];
-            }
-            if(empty($user['user_name_view']))
-            {
-                $user['user_name_view'] = $user['mobile'];
-            }
-            if(empty($user['user_name_view']))
-            {
-                $user['user_name_view'] = $user['email'];
-            }
-
-            // 处理展示用户
-            if($is_privacy === true)
-            {
-                $user['user_name_view'] = substr($user['user_name_view'], 0, 3).'***'.substr($user['user_name_view'], -3);
-            }
-
-            // 头像
-            if(!empty($user['avatar']))
-            {
-                $user['avatar'] = ResourcesService::AttachmentPathViewHandle($user['avatar']);
-            } else {
-                $user['avatar'] = config('shopxo.attachment_host').'/static/index/'.strtolower(config('DEFAULT_THEME', 'default')).'/images/default-user-avatar.jpg';
-            }
-        }
+        // 用户数据处理
+        $user = self::UserHandle($user);
 
         return $user;
     }

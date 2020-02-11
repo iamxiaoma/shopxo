@@ -21,7 +21,7 @@
 					<form class="am-form form-validation admin-save" action="{{:MyUrl('admin/goodscategory/save')}}" method="POST" request-type="ajax-reload" request-value="">
 						<div class="am-form-group">
 							<label class="block">父级</label>
-							<select name="pid" class="am-radius c-p chosen-select forth-selection-form-category" data-placeholder="可选择..." data-validation-message="请选择商品分类">
+							<select name="pid" class="am-radius chosen-select forth-selection-form-category" data-placeholder="可选择..." data-validation-message="请选择商品分类">
 	                            <option value="0">可选择...</option>
 	                            {{if !empty($goods_category_list)}}
 	                                {{foreach $goods_category_list as $v}}
@@ -86,7 +86,7 @@
 						    <label>首页推荐</label>
 						    <div>
 						        {{foreach $common_is_text_list as $v}}
-						            <label class="am-radio-inline m-r-10">
+						            <label class="am-radio-inline am-margin-right-sm">
 						                <input type="radio" name="is_home_recommended" value="{{$v.id}}" data-am-ucheck /> {{$v.name}}
 						            </label>
 						        {{/foreach}}

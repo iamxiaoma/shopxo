@@ -1,5 +1,5 @@
 // 规格弹窗PC显示
-function poptit_pc_show()
+function PoptitPcShow()
 {
     $(document.body).css('position', 'static');
     $('.theme-signin-left').scrollTop(0);
@@ -7,7 +7,7 @@ function poptit_pc_show()
     $('.theme-popover').slideDown(0);
 }
 // 规格弹窗关闭
-function poptit_close()
+function PoptitClose()
 {
     if($(window).width() < 1025)
     {
@@ -46,40 +46,7 @@ function GoodsCommentsHtml(page)
             $('.goods-page-no-data').addClass('none');
             if(result.code == 0)
             {
-                var html = '';
-                for(var i in result.data.data)
-                {
-                    html += '<article class="am-comment">';
-                    html += '<img src="'+result.data.data[i]['user']['avatar']+'" class="am-comment-avatar" alt="'+result.data.data[i]['user']['user_name_view']+'" />';
-                    html += '<div class="am-comment-main">';
-                    html += '<header class="am-comment-hd">';
-                    html += '<div class="am-comment-meta">';
-                    html += '<span class="am-comment-author">'+result.data.data[i]['user']['user_name_view']+'</span>';
-                    html += ' 评论于 <time datetime="">'+result.data.data[i]['add_time_time']+'</time>';
-                    html += '</div>';
-                    html += '</header>';
-                    html += '<div class="am-comment-bd">';
-                    html += '<p>'+result.data.data[i]['content']+'</p>';
-
-                    // 规格
-                    if((result.data.data[i]['msg'] || null) != null)
-                    {
-                        html += '<p class="comment-spec">'+result.data.data[i]['msg']+'</p>';
-                    }
-
-                    // 回复
-                    if(result.data.data[i]['is_reply'] == 1 && (result.data.data[i]['reply'] || null) != null)
-                    {
-                        html += '<div class="comment-reply">';
-                        html += '<span class="comment-reply-title">管理员回复：</span>';
-                        html += '<span class="comment-reply-desc">'+result.data.data[i]['reply']+'</span>';
-                        html += '</div>';
-                    }
-                    html += '</div>';
-                    html += '</article>';
-                }
-
-                $('.goods-comment-content').html(html);
+                $('.goods-comment-content').html(result.data.data);
                 $('.goods-page-container').html(PageLibrary(result.data.total, result.data.number, page, 2));
             }
 
@@ -111,10 +78,24 @@ function CartAdd(e)
 {
     // 参数
     var type = e.attr('data-type');
-    var stock = $('#text_box').val() || 0;
-    if(stock <= 0 || stock < 1)
+    var stock = parseInt($('#text_box').val()) || 1;
+    var inventory = parseInt($('.stock-tips .stock').text());
+    var min = $('.stock-tips .stock').data('min-limit') || 1;
+    var max = $('.stock-tips .stock').data('max-limit') || 0;
+    var unit = $('.stock-tips .stock').data('unit') || '';
+    if(stock < min)
     {
-        PromptCenter('购买数量有误');
+        PromptCenter('最低起购数量'+min+unit);
+        return false;
+    }
+    if(max > 0 && stock > max)
+    {
+        PromptCenter('最大限购数量'+max+unit);
+        return false;
+    }
+    if(stock > inventory)
+    {
+        PromptCenter('库存数量'+inventory+unit);
         return false;
     }
 
@@ -172,7 +153,7 @@ function CartAdd(e)
                 data: {"goods_id": $('.goods-detail').data('id'), "stock": stock, "spec": spec},
                 success: function(result)
                 {
-                    poptit_close();
+                    PoptitClose();
                     $.AMUI.progress.done();
                     $button.attr('disabled', false);
 
@@ -186,7 +167,7 @@ function CartAdd(e)
                 },
                 error: function(xhr, type)
                 {
-                    poptit_close();
+                    PoptitClose();
                     $.AMUI.progress.done();
                     $button.attr('disabled', false);
                     PromptCenter('服务器错误');
@@ -241,16 +222,29 @@ function GoodsSpecDetail()
             $.AMUI.progress.done();
             if(result.code == 0)
             {
-                $('.text-info .price-now').text('￥'+result.data.price);
-                $('.sys_item_price').text(result.data.price);
-                $('.number-tag input[type="number"]').attr('max', result.data.inventory);
-                $('.stock-tips .stock').text(result.data.inventory);
-                if(result.data.original_price > 0)
+                $('.text-info .price-now').text(__price_symbol__+result.data.spec_base.price);
+                $('.goods-price').text(result.data.spec_base.price);
+                $('.number-tag input[type="number"]').attr('max', result.data.spec_base.inventory);
+                $('.stock-tips .stock').text(result.data.spec_base.inventory);
+                if(result.data.spec_base.original_price > 0)
                 {
-                    $('.sys_item_mktprice').text('￥'+result.data.original_price);
-                    $('.sys_item_mktprice').show();
+                    $('.goods-original-price').text(__price_symbol__+result.data.spec_base.original_price);
+                    $('.goods-original-price').parents('.items').show();
                 } else {
-                    $('.sys_item_mktprice').hide();
+                    $('.goods-original-price').parents('.items').hide();
+                }
+
+                // 扩展数据处理
+                var extends_element = result.data.extends_element || [];
+                if(extends_element.length > 0)
+                {
+                    for(var i in extends_element)
+                    {
+                        if((extends_element[i]['element'] || null) != null && extends_element[i]['content'] !== null)
+                        {
+                            $(extends_element[i]['element']).html(extends_element[i]['content']);
+                        }
+                    }
                 }
             } else {
                 if($(window).width() < 640)
@@ -322,13 +316,26 @@ function GoodsSpecType()
                     {
                         $(this).removeClass('sku-dont-choose');
                         var value = $(this).data('value').toString();
-                        if(result.data.indexOf(value) == -1)
+                        if(result.data.spec_type.indexOf(value) == -1)
                         {
                             $(this).addClass('sku-items-disabled');
                         } else {
                             $(this).removeClass('sku-items-disabled');
                         }
                     });
+                }
+
+                // 扩展数据处理
+                var extends_element = result.data.extends_element || [];
+                if(extends_element.length > 0)
+                {
+                    for(var i in extends_element)
+                    {
+                        if((extends_element[i]['element'] || null) != null && extends_element[i]['content'] !== null)
+                        {
+                            $(extends_element[i]['element']).html(extends_element[i]['content']);
+                        }
+                    }
                 }
             } else {
                 if($(window).width() < 640)
@@ -362,10 +369,23 @@ function GoodsSpecType()
  */
 function GoodsBaseRestore()
 {
-    $('.text-info .price-now').text('￥'+$('.text-info .price-now').data('original-price'));
-    $('.sys_item_price').text($('.sys_item_price').data('original-price'));
+    $('.text-info .price-now').text(__price_symbol__+$('.text-info .price-now').data('original-price'));
+    $('.goods-price').text($('.goods-price').data('original-price'));
     $('.number-tag input[type="number"]').attr('max', $('.number-tag input[type="number"]').data('original-max'));
     $('.stock-tips .stock').text($('.stock-tips .stock').data('original-stock'));
+
+    // 价格处理
+    if($('.tb-detail-price .original-price-value').length > 0)
+    {
+        $('.tb-detail-price .original-price-value').each(function(k, v)
+        {
+            var price = $(this).data('original-price');
+            if(price !== undefined)
+            {
+                $(this).text(__price_symbol__+price);
+            }
+        });
+    }
 }
 
 $(function() {
@@ -375,7 +395,7 @@ $(function() {
         $(this).find('ul>li').on('click', function()
         {
             // 切换规格购买数量清空
-            $('#text_box').val(1);
+            $('#text_box').val($('.stock-tips .stock').data('min-limit') || 1);
             
             // 规格处理
             var length = $('.theme-signin-left .sku-items').length;
@@ -465,11 +485,11 @@ $(function() {
                 $('.theme-popover .confirm').attr('data-type', $(this).data('type'));
             }
         } else {
-            poptit_pc_show();
+            PoptitPcShow();
         }
     });
     $('.theme-poptit .close, .btn-op .close').on('click', function() {
-        poptit_close();
+        PoptitClose();
     });
 
     // 购买
@@ -515,7 +535,7 @@ $(function() {
                 data: {"id": $('.goods-detail').data('id')},
                 success: function(result)
                 {
-                    poptit_close();
+                    PoptitClose();
                     $.AMUI.progress.done();
 
                     if(result.code == 0)
@@ -546,7 +566,7 @@ $(function() {
                 },
                 error: function(xhr, type)
                 {
-                    poptit_close();
+                    PoptitClose();
                     $.AMUI.progress.done();
                     if($(window).width() < 640)
                     {
@@ -574,23 +594,55 @@ $(function() {
     });
 
     //获得文本框对象
-    var t = $('#text_box');
+    var $sotck = $('#text_box');
+    var min = $('.stock-tips .stock').data('min-limit') || 1;
+    var max = $('.stock-tips .stock').data('max-limit') || 0;
+    var unit = $('.stock-tips .stock').data('unit') || '';
+
+    // 手动输入
+    $sotck.on('blur', function()
+    {
+        var number = parseInt($(this).val());
+        var inventory = parseInt($('.stock-tips .stock').text());
+        if(number > inventory)
+        {
+            number = inventory;
+        }
+        if(number <= 1)
+        {
+            number = 1;
+        }
+        $sotck.val(number);
+        console.log(number)
+    });
 
     //数量增加操作
-    $('#add').on('click', function() {
-        var stock = parseInt($('.stock-tips .stock').text());
-        var number = parseInt(t.val());
-        if(number < stock)
+    $('#add').on('click', function()
+    {
+        var inventory = parseInt($('.stock-tips .stock').text());
+        var number = parseInt($sotck.val())+1;
+        if(max > 0 && number > max)
         {
-            t.val(number + 1)
-        } else {
-            Prompt('超出库存数量');
+            Prompt('最大限购数量'+max+unit);
+            return false;
         }
+        if(number > inventory)
+        {
+            Prompt('库存数量'+inventory+unit);
+            return false;
+        }
+        $sotck.val(number);
     });
     //数量减少操作
-    $('#min').on('click', function() {
-        var value = parseInt(t.val())-1 || 1;
-        t.val((value <= 1) ? 1 : value);
+    $('#min').on('click', function()
+    {
+        var value = parseInt($sotck.val())-1 || 1;
+        if(value < min)
+        {
+            Prompt('最低起购数量'+min+unit);
+            return false;
+        }
+        $sotck.val(value);
     });
 
     // 评论
@@ -604,24 +656,21 @@ $(function() {
             GoodsCommentsHtml(page);
 
             // 回到评论顶部位置
-            var top = $('.introduce-main').offset().top;
-            $(window).smoothScroll({position: top});
+            $(window).smoothScroll({position: $('.introduce-main').offset().top});
         }
     });
 
     // 累计评价点击事件
     $('.tm-ind-panel .ind-panel-comment').on('click', function()
     {
-        var top = $('.introduce-main').offset().top;
-        $(window).smoothScroll({position: top});
+        $(window).smoothScroll({position: $('.introduce-main').offset().top});
         $('.introduce-main .am-tabs').tabs('open', 1);
     });
 
     // tab事件
     $('.introduce-main .am-tabs li').on('click', function()
     {
-        var top = $('.introduce-main').offset().top;
-        $(window).smoothScroll({position: top});
+        $(window).smoothScroll({position: $('.introduce-main').offset().top});
     });
 
 });
@@ -632,8 +681,8 @@ $(window).resize(function()
     // 规格显示/隐藏处理
     if($(window).width() < 1025)
     {
-        poptit_close();
+        PoptitClose();
     } else {
-        poptit_pc_show();
+        PoptitPcShow();
     }
 });

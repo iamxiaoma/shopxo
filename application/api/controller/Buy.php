@@ -14,6 +14,7 @@ use app\service\GoodsService;
 use app\service\UserService;
 use app\service\PaymentService;
 use app\service\BuyService;
+use app\service\PluginsService;
 
 /**
  * 购买
@@ -60,6 +61,9 @@ class Buy extends Common
             // 支付方式
             $payment_list = PaymentService::BuyPaymentList(['is_enable'=>1, 'is_open_user'=>1]);
 
+            // 当前选中的优惠劵
+            $coupon_id = isset($params['coupon_id']) ? intval($params['coupon_id']) : 0;
+
             // 数据返回组装
             $result = [
                 'goods_list'                => $ret['data']['goods'],
@@ -67,7 +71,17 @@ class Buy extends Common
                 'base'                      => $ret['data']['base'],
                 'extension_data'            => $ret['data']['extension_data'],
                 'common_order_is_booking'   => (int) MyC('common_order_is_booking', 0),
+                'common_site_type'          => (int) MyC('common_site_type', 0, true),
             ];
+
+            // 优惠劵
+            $ret = PluginsService::PluginsControlCall(
+                    'coupon', 'coupon', 'buy', 'api', ['order_goods'=>$ret['data']['goods'], 'coupon_id'=>$coupon_id]);
+            if($ret['code'] == 0 && isset($ret['data']['code']) && $ret['data']['code'] == 0)
+            {
+                $result['plugins_coupon_data'] = $ret['data']['data'];
+            }
+
             return DataReturn('操作成功', 0, $result);
         }
         return $ret;
@@ -85,7 +99,7 @@ class Buy extends Common
     {
         $params = $this->data_post;
         $params['user'] = $this->user;
-        return BuyService::OrderAdd($params);
+        return BuyService::OrderInsert($params);
     }
 }
 ?>

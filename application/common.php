@@ -12,6 +12,219 @@
 // 应用公共文件
 
 /**
+ * 钩子返回数据处理，是否存在错误
+ * @author  Devil
+ * @blog    http://gong.gg/
+ * @version 1.0.0
+ * @date    2019-12-02
+ * @desc    description
+ * @param   [array]          $data [钩子返回的数据]
+ */
+function HookReturnHandle($data)
+{
+    if(!empty($data) && is_array($data))
+    {
+        foreach($data as $v)
+        {
+            if(is_array($v) && isset($v['code']) && $v['code'] != 0)
+            {
+                return $v;
+            }
+        }
+    }
+    return DataReturn('无钩子信息', 0);
+}
+
+/**
+ * 附件地址处理
+ * @author  Devil
+ * @blog    http://gong.gg/
+ * @version 1.0.0
+ * @date    2019-10-16
+ * @desc    用于页面展示处理，非绝对路径的情况下自动加上http
+ * @param   [string]          $value [附件地址]
+ */
+function AttachmentPathViewHandle($value)
+{
+    return app\service\ResourcesService::AttachmentPathViewHandle($value);
+}
+
+/**
+ * 路径解析指定参数
+ * @author  Devil
+ * @blog    http://gong.gg/
+ * @version 1.0.0
+ * @date    2019-08-06
+ * @desc    description
+ * @param   [string]            $key        [指定key]
+ * @param   [mixed]             $default    [默认值]
+ * @param   [string]            $path       [参数字符串 格式如： a/aa/b/bb/c/cc ]
+ */
+function PathToParams($key = null, $default = null, $path = '')
+{
+    $data = $_REQUEST;
+    if(empty($path) && isset($_REQUEST['s']))
+    {
+        $path = $_REQUEST['s'];
+    }
+    if(!empty($path) && !array_key_exists($key, $data))
+    {
+        if(substr($path, 0, 1) == '/')
+        {
+            $path = mb_substr($path, 1, mb_strlen($path, 'utf-8')-1, 'utf-8');
+        }
+        $position = strrpos($path, '.');
+        if($position !== false)
+        {
+            $path = mb_substr($path, 0, $position, 'utf-8');
+        }
+        $arr = explode('/', $path);
+
+        
+        $index = 0;
+        foreach($arr as $k=>$v)
+        {
+            if($index != $k)
+            {
+                $data[$arr[$index]] = $v;
+                $index = $k;
+            }
+        }
+    }
+    
+    if($key !== null)
+    {
+        return array_key_exists($key, $data) ? $data[$key] : $default;
+    }
+    return $data;
+}
+
+/**
+ * 调用插件服务层方法 - 获取插件配置信息
+ * @author   Devil
+ * @blog     http://gong.gg/
+ * @version  1.0.0
+ * @datetime 2019-10-16T22:03:48+0800
+ * @param    [string]          $plugins             [插件名称]
+ * @param    [array]           $attachment_field    [自定义附件字段]
+ * @param    [string]          $service_name        [附件定义的服务层类名]
+ * @param    [string]          $attachment_property [附件属性名称]
+ */
+function CallPluginsData($plugins, $attachment_field = [], $service_name = '', $attachment_property = 'base_config_attachment_field')
+{
+    // 插件是否启用
+    if(app\service\PluginsService::PluginsStatus($plugins) != 1)
+    {
+        return DataReturn('插件状态异常['.$plugins.']', -1);
+    }
+
+    // 查看是否存在基础服务层并且定义获取基础配置方法
+    $plugins_class = 'app\plugins\\'.$plugins.'\service\BaseService';
+    if(class_exists($plugins_class) && method_exists($plugins_class, 'BaseConfig'))
+    {
+        return $plugins_class::BaseConfig();
+    }
+
+    // 未指定附件字段则自动去获取
+    $attachment = $attachment_field;
+    if(empty($attachment_field) && !empty($attachment_property))
+    {
+        // 类自定义或者默认两个类
+        $service_all = empty($service_name) ? ['BaseService', 'Service'] : [$service_name];
+        foreach($service_all as $service)
+        {
+            // 服务层获取附件属性
+            $plugins_class = 'app\plugins\\'.$plugins.'\service\\'.$service;
+            if(class_exists($plugins_class) && property_exists($plugins_class, $attachment_property))
+            {
+                $attachment = $plugins_class::${$attachment_property};
+                break;
+            }
+        }
+    }
+
+    // 获取配置信息
+    return app\service\PluginsService::PluginsData($plugins, $attachment);
+}
+
+/**
+ * 调用插件服务层方法 - 访问为静态
+ * @author   Devil
+ * @blog     http://gong.gg/
+ * @version  1.0.0
+ * @datetime 2019-07-10T22:03:48+0800
+ * @param    [string]          $plugins   [插件名称]
+ * @param    [string]          $service   [服务层名称]
+ * @param    [string]          $method    [方法名称]
+ * @param    [mixed]           $params    [参数]
+ */
+function CallPluginsServiceMethod($plugins, $service, $method, $params = null)
+{
+    $plugins_class = 'app\plugins\\'.$plugins.'\service\\'.$service;
+    if(class_exists($plugins_class))
+    {
+        if(method_exists($plugins_class, $method))
+        {
+            // 插件是否启用
+            if(app\service\PluginsService::PluginsStatus($plugins) != 1)
+            {
+                return DataReturn('插件状态异常['.$plugins.']', -1);
+            }
+
+            // 调用方法返回数据
+            return $plugins_class::$method($params);
+        } else {
+            return DataReturn('类方法未定义['.$plugins.'-'.$service.'-'.$method.']', -1);
+        }
+    }
+    return DataReturn('类未定义['.$plugins.'-'.$service.']', -1);
+}
+
+/**
+ * 判断当前是否小程序环境中
+ * @author   Devil
+ * @blog     http://gong.gg/
+ * @version  1.0.0
+ * @datetime 2019-06-29T22:21:44+0800
+ */
+function MiniAppEnv()
+{
+    if(!empty($_SERVER['HTTP_USER_AGENT']))
+    {
+        // 微信小程序 miniProgram
+        // QQ小程序 miniProgram
+        if(stripos($_SERVER['HTTP_USER_AGENT'], 'miniProgram') !== false)
+        {
+            // 是否QQ小程序
+            if(stripos($_SERVER['HTTP_USER_AGENT'], 'QQ') !== false)
+            {
+                return 'qq';
+            }
+            return 'weixin';
+        }
+
+        // 支付宝客户端 AlipayClient
+        if(stripos($_SERVER['HTTP_USER_AGENT'], 'AlipayClient') !== false)
+        {
+            return 'alipay';
+        }
+
+        // 百度小程序 swan-baiduboxapp
+        if(stripos($_SERVER['HTTP_USER_AGENT'], 'swan-baiduboxapp') !== false)
+        {
+            return 'baidu';
+        }
+
+        // 头条小程序 ToutiaoMicroApp
+        if(stripos($_SERVER['HTTP_USER_AGENT'], 'ToutiaoMicroApp') !== false)
+        {
+            return 'toutiao';
+        }
+    }
+    return null;
+}
+
+/**
  * RGB 转 十六进制
  * @author   Devil
  * @blog     http://gong.gg/
@@ -91,8 +304,16 @@ function StrToAscii($str)
     $change_after = '';
     if(!empty($str))
     {
-        $str = mb_convert_encoding($str, 'GB2312');
-        for($i=0;$i<strlen($str);$i++){
+        // 编码处理
+        $encode = mb_detect_encoding($str);
+        if($encode != 'UTF-8')
+        {
+            $str = mb_convert_encoding($str, 'UTF-8', $encode);
+        }
+
+        // 开始转换
+        for($i=0; $i<strlen($str); $i++)
+        {
             $temp_str = dechex(ord($str[$i]));
             if(isset($temp_str[1]))
             {
@@ -122,13 +343,21 @@ function AsciiToStr($ascii)
     $str = '';
     if(!empty($ascii))
     {
+        // 开始转换
         $asc_arr = str_split(strtolower($ascii), 2);
         for($i=0; $i<count($asc_arr); $i++)
         {
             $str .= chr(hexdec($asc_arr[$i][1].$asc_arr[$i][0]));
         }
+
+        // 编码处理
+        $encode = mb_detect_encoding($str);
+        if($encode != 'UTF-8')
+        {
+            $str = mb_convert_encoding($str, 'UTF-8', $encode);
+        }
     }
-    return mb_convert_encoding($str, 'UTF-8', 'GB2312');
+    return $str;
 }
 
 /**
@@ -230,7 +459,7 @@ function FunEach(&$data)
  */
 function PriceNumberFormat($value, $decimals = 2, $dec_point = '.')
 {
-    return number_format($value, $decimals, $dec_point, '');
+    return number_format((float) $value, $decimals, $dec_point, '');
 }
 
 /**
@@ -548,12 +777,16 @@ function PriceBeautify($price = 0, $default = null)
     }
 
     $price = str_replace('.00', '', $price);
-    if(strpos ($price, '.') !== false)
+    if(strpos($price, '.') !== false)
     {
         if(substr($price, -1) == 0)
         {
             $price = substr($price, 0, -1);
-        } 
+        }
+        if(substr($price, -1) == '.')
+        {
+            $price = substr($price, 0, -1);
+        }
     }
     return $price;
 }
@@ -843,7 +1076,7 @@ function IsMobile()
 
 
 /**
- * [Is_Json 校验json数据是否合法]
+ * 校验json数据是否合法
  * @author   Devil
  * @blog     http://gong.gg/
  * @version  0.0.1
@@ -851,7 +1084,7 @@ function IsMobile()
  * @param    [string] $jsonstr [需要校验的json字符串]
  * @return   [boolean] [合法true, 则false]
  */
-function Is_Json($jsonstr)
+function IsJson($jsonstr)
 {
     if(PHP_VERSION > 5.3)
     {
@@ -863,32 +1096,51 @@ function Is_Json($jsonstr)
 }
 
 /**
- * [Curl_Post curl模拟post]
+ * curl模拟post
  * @author   Devil
  * @blog     http://gong.gg/
  * @version  0.0.1
  * @datetime 2016-12-03T21:58:54+0800
- * @param    [string] $url  [请求地址]
- * @param    [array]  $post [发送的post数据]
+ * @param    [string]   $url        [请求地址]
+ * @param    [array]    $post       [发送的post数据]
+ * @param    [boolean]  $is_json    [是否使用 json 数据发送]
+ * @return   [mixed]                [请求返回的数据]
  */
-function Curl_Post($url, $post)
+function CurlPost($url, $post, $is_json = false)
 {
-    $options = array(
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HEADER         => false,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $post,
-    );
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HEADER, false);
+    curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+    curl_setopt($ch, CURLOPT_URL, $url);
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, $options);
+    // 是否 json
+    if($is_json)
+    {
+        $data_string = json_encode($post);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                "Content-Type: application/json; charset=utf-8",
+                "Content-Length: " . strlen($data_string)
+            )
+        );
+    } else {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                "Content-Type: application/x-www-form-urlencoded",
+                "cache-control: no-cache"
+            )
+        );
+    }
+
     $result = curl_exec($ch);
     curl_close($ch);
     return $result;
 }
 
 /**
- * [Fsockopen_Post fsockopen方式]
+ * fsockopen方式
  * @author   Devil
  * @blog     http://gong.gg/
  * @version  0.0.1
@@ -896,7 +1148,7 @@ function Curl_Post($url, $post)
  * @param    [string] $url  [url地址]
  * @param    [string] $data [发送参数]
  */
-function Fsockopen_Post($url, $data = '')
+function FsockopenPost($url, $data = '')
 {
     $row = parse_MyUrl($url);
     $host = $row['host'];
@@ -932,7 +1184,7 @@ function Fsockopen_Post($url, $data = '')
 }
 
 /**
- * [Xml_Array xml转数组]
+ * xml转数组
  * @author   Devil
  * @blog     http://gong.gg/
  * @version  0.0.1
@@ -940,7 +1192,7 @@ function Fsockopen_Post($url, $data = '')
  * @param    [xml] $xmlstring [xml数据]
  * @return   [array]          [array数组]
  */
-function Xml_Array($xmlstring) {
+function XmlArray($xmlstring) {
     return json_decode(json_encode((array) simplexml_load_string($xmlstring)), true);
 }
 
@@ -1302,74 +1554,6 @@ function Authcode($string, $operation = 'DECODE', $key = '', $expiry = 0) {
         // 因为加密后的密文可能是一些特殊字符，复制过程可能会丢失，所以用base64编码
         return $keyc.str_replace('=', '', base64_encode($result));
     }
-}
-
-/**
- * [SS 设置缓存]
- * @author   Devil
- * @blog     http://gong.gg/
- * @version  1.0.0
- * @datetime 2017-09-24T19:01:00+0800
- * @param    [string]              $key  [缓存key]
- * @param    [mixed]               $data [需要存储的数据]
- * @return   [boolean]                   [成功true, 失败false]
- */
-function SS($key, $data)
-{
-    if(empty($key) || empty($data))
-    {
-        return false;
-    }
-
-    $data['cache_time'] = time();
-    return cache($key, $data);
-}
-
-/**
- * [GS 获取缓存]
- * @author   Devil
- * @blog     http://gong.gg/
- * @version  1.0.0
- * @datetime 2017-09-24T18:54:54+0800
- * @param    [string]          $key             [缓存key]
- * @param    [integer]         $expires_time    [默认过期时间0长期有效（单位秒）]
- * @param    [boolean]         $is_filem_time   [是否返回文件上一次更新时间]
- * @return   [boolean|mixed]                    [没数据false, 则数据]
- */
-function GS($key, $expires_time = 0, $is_filem_time = false)
-{
-    if(empty($key))
-    {
-        return false;
-    }
-    $data = cache($key);
-    if($data !== null)
-    {
-        $expires_time = intval($expires_time);
-        if($expires_time > 0)
-        {
-            if($data['cache_time']+$expires_time < time())
-            {
-                return false;
-            }
-        }
-        return $data;
-    }
-    return false;
-}
-
-/**
- * [DS 删除缓存]
- * @author   Devil
- * @blog     http://gong.gg/
- * @version  1.0.0
- * @datetime 2017-09-24T19:01:00+0800
- * @param    [string]              $key  [缓存key]
- * @return   [boolean]                   [成功true, 失败false]
- */
-function DS($key)
-{
-    return cache($key, null);
 }
 
 /**

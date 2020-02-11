@@ -18,7 +18,7 @@ time, mark, audio, video {
     padding: 0;
     border: 0;
     vertical-align: baseline;
-    font-family: arial,"Lantinghei SC","Microsoft Yahei";
+    font-family: "Microsoft YaHei",SimSun;
     font-style: normal;
 }
 * { font-size: 12px; }
@@ -398,12 +398,14 @@ ul {margin-top:0;}
 .admin-sidebar {width:260px;min-height:100%;float:left;border-right:1px solid #cecece;}
 .admin-sidebar.am-active {z-index:1600;}
 .admin-sidebar-list {margin-bottom:0;}
+.admin-sidebar-list>li:first-child { border-top: 0 !important; }
+.admin-sidebar-list>li:last-child { border-bottom: 0 !important; }
 .admin-sidebar-list li a {color:#b6b6b6;padding-left:24px;}
 .admin-sidebar-list li:first-child {border-top:none;}
-.admin-sidebar-sub {margin-top:0;margin-bottom:0;box-shadow:0 16px 8px -15px #e2e2e2 inset;background:#404040;padding-left:24px;}
+.admin-sidebar-sub {margin-top:0;margin-bottom:0;box-shadow:0 16px 8px -15px #e2e2e2 inset;background:#646464;padding-left:10px;}
 .admin-sidebar-sub li:first-child {border-top:1px solid #dedede;}
 .admin-sidebar {height:100%;overflow-x:hidden;overflow-y:scroll;-webkit-overflow-scrolling:touch;}
-.admin-sidebar .am-icon-angle-down {margin-top: 5px;}
+.admin-sidebar .am-icon-angle-down {margin-top: 2px;}
 @media only screen and (min-width:641px) {
     header { left: 169px; }
     header .am-topbar-brand, .am-topbar-nav > li > a { line-height: 35px; }
@@ -425,12 +427,13 @@ ul {margin-top:0;}
 /*---right Content---*/
 .content-right .content {padding:10px 10px 0 10px;}
 .admin-sidebar-list li a {padding:0.6rem;}
-.common-left-menu a:hover { background:rgba(118, 119, 120, 0.1); }
-.common-left-menu-active {background:rgba(118, 119, 120, 0.3) !important;color:#fff !important;}
+.admin-sidebar-list li a .iconfont { vertical-align: middle; }
+.common-left-menu a:hover { background:rgba(118, 119, 120, 0.45); }
+.common-left-menu-active {background:#1cc09f !important;color:#fff !important;}
 #ifcontent {border:0px;}
 .am-table > tbody > tr > td {vertical-align:top;}
 .admin-offcanvas-bar, .admin-offcanvas-bar .am-list > li { background: #36373c; }
-.admin-offcanvas-bar .am-list > li { border: 1px solid #2e2e31; }
+.admin-offcanvas-bar .am-list > li { border-style: solid; border-width: 1px 0; border-color: #2e2e31; }
 
 /**
  * excel导入窗口
@@ -476,7 +479,7 @@ ul {margin-top:0;}
  */
 .menu-mini-container-tips{position:absolute;left:63px;top:0;padding:0 10px;width:auto;height:35px;line-height:35px;text-align:center;color:#fff;background-color:#01bcd4;-webkit-box-shadow:0 0 5px rgba(0,0,0,.2);-moz-box-shadow:0 0 5px rgba(0,0,0,.2);box-shadow:0 0 5px rgba(0,0,0,.2);font-weight:700;display:none;z-index:1001;}
 .menu-mini-container-tips span{font-size:12px}
-.menu-mini-container-tips .mui-mbar-tab-tip,.menu-mini-container-popup .mui-mbar-tab-tip{position:absolute;width:16px;height:16px;line-height:16px;text-align:center;font-size:16px;font-family:"\5b8b\4f53";top:10px;left:-8px;z-index:0;color:#01bcd4}
+.menu-mini-container-tips .mui-mbar-tab-tip,.menu-mini-container-popup .mui-mbar-tab-tip{position:absolute;width:16px;height:16px;line-height:16px;text-align:center;font-size:16px;font-family:"\5b8b\4f53";top:10px;left:-11px;z-index:0;color:#01bcd4;}
 
 /**
  * mini子菜单
@@ -489,6 +492,7 @@ ul {margin-top:0;}
 .menu-mini-container-popup ul li a span{font-size:12px}
 .menu-mini-container-popup ul li:not(:last-child){border-bottom:1px solid #2e2e31}
 .menu-mini-container-popup .mui-mbar-tab-tip{color:#36373c}
+.menu-mini-container-popup ul li a.common-left-menu-active { background: #686868 !important; }
 
 
 /**
